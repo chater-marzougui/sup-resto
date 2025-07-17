@@ -19,7 +19,8 @@ export const userRouter = createTRPCRouter({
       firstName: z.string(),
       lastName: z.string(),
       email: z.string().email().optional(),
-      role: z.enum(['student', 'paymentStaff', 'verificationStaff', 'admin']).default('student'),
+      role: z.enum(['student', 'paymentStaff', 'verificationStaff', 'admin', 'normalUser', 'teacher']).default('student'),
+      password: z.string().min(6),
     }))
     .mutation(async ({ ctx, input }) => {
       const newUser = await ctx.db.insert(users).values(input).returning();

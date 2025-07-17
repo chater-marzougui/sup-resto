@@ -1,10 +1,13 @@
-import { pgTable, text, timestamp, integer, boolean, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, boolean, pgEnum, decimal, index, unique, jsonb } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
+import { mealTimeEnum, scheduleStatusEnum, transactionTypeEnum, userRoleEnum } from './enums';
 
-// Enums
-export const roleEnum = pgEnum('role', ['student', 'paymentStaff', 'verificationStaff', 'admin']);
-export const mealTimeEnum = pgEnum('meal_time', ['breakfast', 'lunch', 'dinner']);
-export const transactionTypeEnum = pgEnum('transaction_type', ['purchase', 'refund', 'meal_redemption']);
+// Type definitions for JSON fields
+export type StatusHistoryEntry = {
+  status: typeof scheduleStatusEnum.enumValues[number];
+  timestamp: string;
+};
 
 // Users table
 export const users = pgTable('users', {
@@ -13,39 +16,96 @@ export const users = pgTable('users', {
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   email: text('email').unique(),
-  role: roleEnum('role').notNull().default('student'),
-  mealBalance: integer('meal_balance').notNull().default(0),
+  password: text('password').notNull(),
+  role: integer('role').notNull().default(5), // Default to 'normalUser'
+  balance: integer('balance').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
+  lastLogin: timestamp('last_login'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ([
+  index('cin_idx').on(table.cin),
+  index('email_idx').on(table.email),
+]));
 
 // Meal schedules table
 export const mealSchedules = pgTable('meal_schedules', {
   id: text('id').$defaultFn(() => createId()).primaryKey(),
-  userId: text('user_id').references(() => users.id).notNull(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   mealTime: mealTimeEnum('meal_time').notNull(),
   scheduledDate: timestamp('scheduled_date').notNull(),
-  isRedeemed: boolean('is_redeemed').notNull().default(false),
-  redeemedAt: timestamp('redeemed_at'),
+  status: scheduleStatusEnum('schedule_status').notNull().default('scheduled'),
+  statusHistory: jsonb('status_history').$type<StatusHistoryEntry[]>().default([]),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ([
+  unique('user_date_meal_unique').on(table.userId, table.scheduledDate, table.mealTime),
+  index('meal_schedules_user_id_idx').on(table.userId),
+  index('meal_schedules_scheduled_date_idx').on(table.scheduledDate),
+  index('meal_schedules_status_idx').on(table.status),
+]));
 
 // Transactions table
 export const transactions = pgTable('transactions', {
   id: text('id').$defaultFn(() => createId()).primaryKey(),
-  userId: text('user_id').references(() => users.id).notNull(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   type: transactionTypeEnum('type').notNull(),
-  amount: integer('amount').notNull(),
-  description: text('description'),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(), // Changed to decimal for financial accuracy
   processedBy: text('processed_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => ([
+  index('transactions_user_id_idx').on(table.userId),
+  index('transactions_type_idx').on(table.type),
+  index('transactions_created_at_idx').on(table.createdAt),
+  index('transactions_processed_by_idx').on(table.processedBy),
+]));
 
-// Sessions table (for offline sync)
-export const sessions = pgTable('sessions', {
+// Offline sync logs
+export const syncLogs = pgTable('sync_logs', {
   id: text('id').$defaultFn(() => createId()).primaryKey(),
-  deviceId: text('device_id').notNull(),
-  lastSync: timestamp('last_sync').defaultNow().notNull(),
-  syncData: text('sync_data'), // JSON string for offline data
-});
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  syncType: text('sync_type').notNull(), // 'full', 'incremental', 'push'
+  success: boolean('success').notNull(),
+  errorMessage: text('error_message'),
+  recordsAffected: integer('records_affected'), // Number of records synced
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ([
+  index('sync_logs_user_id_idx').on(table.userId),
+  index('sync_logs_created_at_idx').on(table.createdAt),
+  index('sync_logs_sync_type_idx').on(table.syncType),
+]));
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  mealSchedules: many(mealSchedules),
+  transactions: many(transactions),
+  processedTransactions: many(transactions, { relationName: 'processedBy' }),
+  syncLogs: many(syncLogs),
+}));
+
+export const mealSchedulesRelations = relations(mealSchedules, ({ one, many }) => ({
+  user: one(users, {
+    fields: [mealSchedules.userId],
+    references: [users.id],
+  }),
+  relatedTransactions: many(transactions),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  user: one(users, {
+    fields: [transactions.userId],
+    references: [users.id],
+  }),
+  processedByUser: one(users, {
+    fields: [transactions.processedBy],
+    references: [users.id],
+    relationName: 'processedBy',
+  })
+}));
+
+export const syncLogsRelations = relations(syncLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [syncLogs.userId],
+    references: [users.id],
+  }),
+}));
