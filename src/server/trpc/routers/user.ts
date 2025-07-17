@@ -18,8 +18,8 @@ export const userRouter = createTRPCRouter({
       cin: z.string(),
       firstName: z.string(),
       lastName: z.string(),
-      email: z.string().email().optional(),
-      role: z.enum(['student', 'paymentStaff', 'verificationStaff', 'admin', 'normalUser', 'teacher']).default('student'),
+      email: z.email().optional(),
+      role: z.number().int().min(1).max(5).default(5), // Default to 'normalUser'
       password: z.string().min(6),
     }))
     .mutation(async ({ ctx, input }) => {

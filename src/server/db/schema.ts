@@ -75,32 +75,40 @@ export const syncLogs = pgTable('sync_logs', {
   index('sync_logs_sync_type_idx').on(table.syncType),
 ]));
 
-// Relations
+// Fixed Relations - Properly disambiguated
 export const usersRelations = relations(users, ({ many }) => ({
   mealSchedules: many(mealSchedules),
-  transactions: many(transactions),
-  processedTransactions: many(transactions, { relationName: 'processedBy' }),
+  // Transactions created by this user
+  userTransactions: many(transactions, {
+    relationName: 'userTransactions',
+  }),
+  // Transactions processed by this user
+  processedTransactions: many(transactions, {
+    relationName: 'processedTransactions',
+  }),
   syncLogs: many(syncLogs),
 }));
 
-export const mealSchedulesRelations = relations(mealSchedules, ({ one, many }) => ({
+export const mealSchedulesRelations = relations(mealSchedules, ({ one }) => ({
   user: one(users, {
     fields: [mealSchedules.userId],
     references: [users.id],
   }),
-  relatedTransactions: many(transactions),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
+  // User who owns this transaction
   user: one(users, {
     fields: [transactions.userId],
     references: [users.id],
+    relationName: 'userTransactions',
   }),
+  // User who processed this transaction
   processedByUser: one(users, {
     fields: [transactions.processedBy],
     references: [users.id],
-    relationName: 'processedBy',
-  })
+    relationName: 'processedTransactions',
+  }),
 }));
 
 export const syncLogsRelations = relations(syncLogs, ({ one }) => ({

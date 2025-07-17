@@ -8,14 +8,15 @@
     "start": "next start",
     "lint": "next lint",
     "db:push": "drizzle-kit push --config=drizzle.config.ts",
-    "db:orm:migrate": "ts-node ./src/db/migrate.ts",
+    "db:orm:migrate": "tsx ./src/server/db/migrate.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio",
-    "db:clear": "ts-node ./src/db/clear.ts",
-    "db:seed": "ts-node ./src/db/seed.ts",
-    "db:reset": "ts-node ./src/db/reset.ts",
-    "db:reset:seed": "ts-node ./src/db/reset.ts && ts-node ./src/db/seed.ts"
+    "db:clear": "tsx ./src/server/db/clear.ts",
+    "db:drop": "drizzle-kit drop --config=drizzle.config.ts",
+    "db:seed": "tsx ./src/server/db/seeds/seed.ts",
+    "db:reset": "tsx ./src/server/db/reset.ts",
+    "db:reset:seed": "tsx ./src/server/db/reset.ts && tsx ./src/server/db/seeds/seed.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
@@ -65,8 +66,9 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.1",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
     "tw-animate-css": "^1.3.5",
-    "typescript": "^5"
+    "typescript": "^5.8.3"
   }
 }

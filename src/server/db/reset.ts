@@ -4,9 +4,10 @@ import { join } from "path";
 import { execSync } from "child_process";
 import logger from "../../config/logger";
 
-const MIGRATIONS_FOLDER = join(__dirname, "..", "..", "drizzle");
+const MIGRATIONS_FOLDER = join(__dirname, "..", "db", "migrations");
 
 async function resetSchema() {
+  console.log("🔄 Resetting the database schema...", MIGRATIONS_FOLDER);
   try {
     logger.info("Resetting public schema...");
     await pg`DROP SCHEMA public CASCADE;`;

@@ -1,9 +1,13 @@
+CREATE TYPE "public"."meal_time" AS ENUM('lunch', 'dinner');--> statement-breakpoint
+CREATE TYPE "public"."schedule_status" AS ENUM('scheduled', 'refunded', 'cancelled', 'redeemed', 'expired');--> statement-breakpoint
+CREATE TYPE "public"."transaction_type" AS ENUM('purchase', 'refund', 'meal_redemption', 'balance_adjustment');--> statement-breakpoint
+CREATE TYPE "public"."role" AS ENUM('admin', 'payment_staff', 'verification_staff', 'student', 'teacher', 'normal_user');--> statement-breakpoint
 CREATE TABLE "meal_schedules" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
 	"meal_time" "meal_time" NOT NULL,
 	"scheduled_date" timestamp NOT NULL,
-	"status" "schedule_status" DEFAULT 'scheduled' NOT NULL,
+	"schedule_status" "schedule_status" DEFAULT 'scheduled' NOT NULL,
 	"status_history" jsonb DEFAULT '[]'::jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -52,7 +56,7 @@ ALTER TABLE "transactions" ADD CONSTRAINT "transactions_user_id_users_id_fk" FOR
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_processed_by_users_id_fk" FOREIGN KEY ("processed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "meal_schedules_user_id_idx" ON "meal_schedules" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "meal_schedules_scheduled_date_idx" ON "meal_schedules" USING btree ("scheduled_date");--> statement-breakpoint
-CREATE INDEX "meal_schedules_status_idx" ON "meal_schedules" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "meal_schedules_status_idx" ON "meal_schedules" USING btree ("schedule_status");--> statement-breakpoint
 CREATE INDEX "sync_logs_user_id_idx" ON "sync_logs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "sync_logs_created_at_idx" ON "sync_logs" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "sync_logs_sync_type_idx" ON "sync_logs" USING btree ("sync_type");--> statement-breakpoint
