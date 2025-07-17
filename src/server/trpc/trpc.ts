@@ -1,14 +1,16 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-import { type Context } from './context';
-import { ZodError } from 'zod';
+import { 
+  createTRPCContext, 
+  enforceUserIsAuthed, 
+  enforceUserIsAdmin,
+  enforceUserIsSuperAdmin,
+  enforceUserIsActive,
+  type AuthContext 
+} from '../middleware/auth-middleware';
 import superjson from 'superjson';
 
-type User = {
-  id: string;
-  role: 'admin' | 'paymentStaff' | 'verificationStaff' | 'user';
-};
-
-const t = initTRPC.context<Context>().create({
+// Initialize tRPC
+const t = initTRPC.context<AuthContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
     return {
@@ -16,45 +18,86 @@ const t = initTRPC.context<Context>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof ZodError ? error.cause.flatten() : null,
+          error.cause instanceof Error && error.cause.name === 'ZodError'
+            ? error.cause.message
+            : null,
       },
     };
   },
 });
 
+// Export reusable router and procedure helpers
 export const createTRPCRouter = t.router;
+export const middleware = t.middleware;
+
+/**
+ * Public procedure - no authentication required
+ */
 export const publicProcedure = t.procedure;
 
-// Middleware for role-based access
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  // Add authentication logic here
-  // This is a placeholder - implement actual auth check
-  const user = null as unknown as User; // Get user from session/token
+/**
+ * Protected procedure - requires authentication
+ */
+export const protectedProcedure = t.procedure.use(
+  middleware(async ({ ctx, next }) => {
+    const authedCtx = enforceUserIsAuthed(ctx);
+    const activeCtx = enforceUserIsActive(authedCtx);
+    return next({
+      ctx: activeCtx,
+    });
+  })
+);
 
-  if (!user) {
-    throw new TRPCError({ code: 'UNAUTHORIZED' });
-  }
+/**
+ * Admin procedure - requires admin role (1 or 2)
+ */
+export const adminProcedure = t.procedure.use(
+  middleware(async ({ ctx, next }) => {
+    const authedCtx = enforceUserIsAuthed(ctx);
+    const activeCtx = enforceUserIsActive(authedCtx);
+    const adminCtx = enforceUserIsAdmin(activeCtx);
+    return next({
+      ctx: adminCtx,
+    });
+  })
+);
 
-  return next({
-    ctx: {
-      ...ctx,
-      user,
-    },
-  });
-});
+/**
+ * Super admin procedure - requires super admin role (1)
+ */
+export const superAdminProcedure = t.procedure.use(
+  middleware(async ({ ctx, next }) => {
+    const authedCtx = enforceUserIsAuthed(ctx);
+    const activeCtx = enforceUserIsActive(authedCtx);
+    const superAdminCtx = enforceUserIsSuperAdmin(activeCtx);
+    return next({
+      ctx: superAdminCtx,
+    });
+  })
+);
 
-// Role-specific procedures
-export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.user.role !== 'admin') {
-    throw new TRPCError({ code: 'FORBIDDEN' });
-  }
-  return next();
-});
+/**
+ * Custom role-based procedure
+ */
+export const roleProcedure = (allowedRoles: number[]) => {
+  return t.procedure.use(
+    middleware(async ({ ctx, next }) => {
+      const authedCtx = enforceUserIsAuthed(ctx);
+      const activeCtx = enforceUserIsActive(authedCtx);
+      
+      if (!allowedRoles.includes(activeCtx.user?.role ?? -1)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Insufficient permissions',
+        });
+      }
+      
+      return next({
+        ctx: activeCtx,
+      });
+    })
+  );
+};
 
-export const staffProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const allowedRoles = ['admin', 'paymentStaff', 'verificationStaff'];
-  if (!allowedRoles.includes(ctx.user.role)) {
-    throw new TRPCError({ code: 'FORBIDDEN' });
-  }
-  return next();
-});
+// Export the context creator
+export { createTRPCContext };

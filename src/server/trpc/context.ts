@@ -1,11 +1,11 @@
-import { type CreateNextContextOptions } from '@trpc/server/adapters/next';
 import { db } from '@/server/db';
 
-export const createTRPCContext = (opts: CreateNextContextOptions) => {
+export const createTRPCContext = (opts: {
+  req?: Request;
+}) => {
   return {
     db,
     req: opts.req,
-    res: opts.res,
   };
 };
 

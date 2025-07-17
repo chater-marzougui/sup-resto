@@ -60,6 +60,11 @@ export const transactions = pgTable('transactions', {
   index('transactions_processed_by_idx').on(table.processedBy),
 ]));
 
+export const settings = pgTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull()
+});
+
 // Offline sync logs
 export const syncLogs = pgTable('sync_logs', {
   id: text('id').$defaultFn(() => createId()).primaryKey(),
