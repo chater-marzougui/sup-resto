@@ -18,16 +18,24 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       })
   );
 
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
-      links: [
-        httpBatchLink({
-          url: '/api/trpc',
-          transformer: superjson,
-        }),
-      ],
-    })
-  );
+  const trpcClient = trpc.createClient({
+    links: [
+      httpBatchLink({
+        url: '/api/trpc',
+        transformer: superjson,
+        headers: () => {
+          // Get token from localStorage
+          const token = typeof window !== 'undefined' 
+            ? localStorage.getItem('auth_token') 
+            : null;
+          
+          return {
+            ...(token && { authorization: `Bearer ${token}` }),
+          };
+        },
+      }),
+    ],
+  });
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
