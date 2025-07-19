@@ -1,4 +1,7 @@
 import { TRPCProvider } from '@/components/providers/trpc-provider';
+import { AuthProvider } from '@/components/auth/use-auth';
+import { Navbar } from '@/components/elements/navBar';
+
 import './globals.css';
 import { Inter } from 'next/font/google';
 
@@ -18,7 +21,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <TRPCProvider>
-          {children}
+          <AuthProvider>
+            <div className="min-h-screen bg-gray-50">
+              <Navbar />
+              {children}
+            </div>
+          </AuthProvider>
         </TRPCProvider>
       </body>
     </html>

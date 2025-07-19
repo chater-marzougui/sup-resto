@@ -1,30 +1,16 @@
 "use client";
 import { useAuth } from "@/components/auth/use-auth";
-import { useRouter } from "next/navigation";
+import LoadingSpinner from "@/components/elements/LoadingSpinner";
 import { useEffect } from "react";
-import { isLoadingAnimation } from "@/components/elements/isLoading";
 
 export default function LogoutPage() {
-  const { user, isLoading, isAuthenticated, logout } = useAuth();
-  const router = useRouter();
+  const { logout, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        console.log("Not authenticated, redirecting to login");
-        router.push("/auth/login");
-      } else {
-        console.log("Logging out user");
-        logout();
-      }
+    if (isAuthenticated) {
+      logout();
     }
-  }, [isLoading, isAuthenticated, logout, router]);
+  }, [isAuthenticated, logout]);
 
-  if (isLoading) {
-    console.log("still loading");
-    return isLoadingAnimation;
-  }
-
-  // Show loading while logout is in progress
-  return isLoadingAnimation;
+  return <LoadingSpinner />;
 }
