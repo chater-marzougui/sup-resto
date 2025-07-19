@@ -5,20 +5,15 @@ import { useState, useEffect } from "react";
 
 export function useAuth() {
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setLoading] = useState(false);
+  const [isLoading, setLoading] = useState(true); // Start as true
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
-  // Only use router on client side
-  let router: ReturnType<typeof useRouter> | null = null;
-  try {
-    router = useRouter();
-  } catch (e) {
-    console.warn('Router not available:', e);
-  }
+  const router = useRouter();
 
-  // Use the mutation hook at the top level of the custom hook
+  // Use the mutation hook at the top level
   const loginMutation = trpc.auth.login.useMutation();
+  const logoutMutation = trpc.auth.logout.useMutation();
 
   const login = async (cin: string, password: string) => {
     try {
@@ -26,44 +21,49 @@ export function useAuth() {
       setError(null);
       console.log("Attempting to login with CIN:", cin);
       
-      // Use the mutation instance
       const result = await loginMutation.mutateAsync({
         cin,
         password
       });
       
-      // Store the token in localStorage or cookies
       if (result.token) {
         localStorage.setItem('auth_token', result.token);
         setIsAuthenticated(true);
-      }
-      
-      if (router && isClient) {
         router.push("/dashboard");
       }
+      
       return result;
     } catch (err: any) {
       setError(err.message ?? "Login failed");
-      throw err; // Re-throw to allow caller to handle if needed
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Check if user is already authenticated on mount
+  // Initialize authentication state
   useEffect(() => {
-    setIsClient(true);
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      setIsAuthenticated(true);
-    }
+    const initializeAuth = () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Error accessing localStorage:', error);
+      } finally {
+        setIsInitialized(true);
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
-  // Query user data only when authenticated
+  // Query user data only when authenticated and initialized
   const { data: user, isLoading: userLoading } = trpc.auth.me.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && isInitialized,
     retry: (failureCount, error: any) => {
-      // If unauthorized, clear token and don't retry
       if (error?.data?.code === 'UNAUTHORIZED') {
         localStorage.removeItem('auth_token');
         setIsAuthenticated(false);
@@ -75,34 +75,33 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      // Clear local storage
+      setLoading(true);
+      await logoutMutation.mutateAsync();
       localStorage.removeItem('auth_token');
       setIsAuthenticated(false);
       
-      // If you have a logout endpoint, call it here
-      // await logoutMutation.mutateAsync();
       
-      if (router && isClient) {
-        router.push("/auth/login");
-      }
+      router.push("/auth/login");
     } catch (err) {
       console.error("Logout failed:", err);
-      // Even if logout fails on server, clear local state
+      // Clear local state even if server call fails
       localStorage.removeItem('auth_token');
       setIsAuthenticated(false);
-      if (router && isClient) {
-        router.push("/auth/login");
-      }
+      router.push("/auth/login");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const finalIsLoading = !isInitialized || isLoading || loginMutation.isPending || userLoading;
+
   return { 
     login, 
-    isLoading: isLoading || loginMutation.isPending || userLoading, 
+    isLoading: finalIsLoading, 
     error: error || loginMutation.error?.message,
     user,
     logout,
     isAuthenticated,
-    isClient
+    isInitialized
   };
 }

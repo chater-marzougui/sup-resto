@@ -19,7 +19,7 @@ export function withDashboardLayout<P extends object>(
   const { requiredRole, redirectTo = '/auth/login' } = options;
 
   return function DashboardWrapper(props: P) {
-    const { user, isLoading, logout } = useAuth();
+    const { user, isLoading } = useAuth();
     const router = useRouter();
     const [isOnline, setIsOnline] = React.useState(true);
 
@@ -52,8 +52,7 @@ export function withDashboardLayout<P extends object>(
     }, [user, isLoading, router, requiredRole, redirectTo]);
 
     const handleLogout = async () => {
-      await logout();
-      router.push('/auth/login');
+      router.push('/auth/logout');
     };
 
     if (isLoading) {

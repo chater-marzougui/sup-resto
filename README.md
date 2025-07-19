@@ -27,33 +27,6 @@ Traditional paper ticket systems (10 tickets for 2 TND) are inefficient, prone t
 
 ## Project Architecture
 
-### Root Configuration Files
-
-#### `.env` / `.env.example`
-**Purpose**: Environment configuration management
-**Functionality**: 
-- Database connection strings
-- JWT secrets and API keys
-- Application environment settings (development/production)
-- Offline sync configuration parameters
-
-#### `drizzle.config.ts`
-**Purpose**: Database ORM configuration
-**Functionality**:
-- Database connection setup for migrations
-- Schema file paths and output directories
-- Migration generation and deployment settings
-
-#### `package.json`
-**Purpose**: Project dependencies and scripts
-**Functionality**:
-- Frontend/backend dependencies management
-- Build scripts for development and production
-- Database migration and seeding scripts
-- Offline sync and PWA setup scripts
-
----
-
 ### Application Layer (`src/app/`)
 
 #### `layout.tsx`
