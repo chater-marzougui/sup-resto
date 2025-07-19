@@ -574,9 +574,9 @@ export class MealService {
   }
   
   /**
-   * Helper methods
+   * Get meal by ID
    */
-  private static async getMealById(id: string): Promise<MealScheduleWithUser> {
+  static async getMealById(id: string): Promise<MealScheduleWithUser> {
     const meal = await db.query.mealSchedules.findFirst({
       where: eq(mealSchedules.id, id),
       with: {

@@ -375,4 +375,42 @@ export const mealRouter = createTRPCRouter({
         });
       }
     }),
+
+  /**
+   * Get meal by ID (admin or meal owner)
+   */
+  getMealById: protectedProcedure
+    .input(z.object({ mealId: z.string() }))
+    .query(async ({ ctx, input }) => {
+         
+      if (!ctx.user) {
+        throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'You must be logged in to view upcoming meals',
+        });
+      }
+
+      try {
+        const meal = await MealService.getMealById(input.mealId);
+        
+        // Check if user can access this meal
+        if (meal.userId !== ctx.user.id && ctx.user.role !== 1) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You can only view your own meals',
+          });
+        }
+        
+        return meal;
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch meal',
+          cause: error,
+        });
+      }
+    }),
 });
