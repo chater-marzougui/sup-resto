@@ -33,12 +33,19 @@ const countryOptions = [
         altText: "France Flag",
     },
     {
-        value: "united-kingdom",
-        name: "United Kingdom",
+        value: "english",
+        name: "English",
         code: "en",
         flagUrl: "/assets/flags/gb.webp",
         altText: "United Kingdom Flag",
     },
+    {
+        value: "arabic",
+        name: "Arabic",
+        code: "ar",
+        flagUrl: "/assets/flags/tn.webp",
+        altText: "Tunisia Flag",
+    }
 ];
 
 export function NavUser() {
@@ -128,9 +135,9 @@ export function NavUser() {
                                                             src={country.flagUrl}
                                                             alt={country.altText}
                                                         />
-                                                        {/* <div className="w-full rounded-sm border-[1px]">
-                                                                                                                                                <Flag className="w-12 h-auto"/>
-                                                                                                                                        </div> */}
+                                                        <span className="ml-2">
+                                                            {country.name}
+                                                        </span>
                                                     </DropdownMenuItem>
                                                 );
                                             })}

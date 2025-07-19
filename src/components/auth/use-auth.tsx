@@ -3,7 +3,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useRouter } from 'next/navigation';
-import { RoleEnum } from '@/server/db/enums';
 import { AuthUser } from '@/server/trpc/services/auth-service';
 
 interface AuthContextType {
@@ -33,6 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [hasInitialized, setHasInitialized] = useState(false);
 
   const router = useRouter();
+  const isBrowser = typeof window !== 'undefined';
   
   // tRPC mutations
   const loginMutation = trpc.auth.login.useMutation();
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Only fetch user data once during initialization
   const { data: userData, isLoading: userDataLoading } = trpc.auth.me.useQuery(undefined, {
-    enabled: !hasInitialized && !!localStorage.getItem('auth_token'),
+    enabled: !hasInitialized && isBrowser && !!localStorage.getItem('auth_token'),
     retry: (failureCount, error: any) => {
       if (error?.data?.code === 'UNAUTHORIZED') {
         handleAuthFailure();

@@ -4,9 +4,10 @@ import LoadingSpinner from "@/components/elements/LoadingSpinner";
 import { useEffect } from "react";
 
 export default function LogoutPage() {
-  const { logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
+    if (isLoading) return;
     if (isAuthenticated) {
       logout();
     }
