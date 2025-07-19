@@ -1,8 +1,8 @@
-# Smart Digital Meal Ticketing System - Project Architecture
+# Smart Digital Meal Ticketing System - SupResto
 
 ## Project Overview
 
-The **Smart Digital Meal Ticketing System** is a comprehensive solution designed to modernize university canteen operations by replacing traditional paper-based meal tickets with a fully digital system. The system leverages existing student ID QR codes (containing CIN - Citizen Identity Number) to provide secure, efficient, and environmentally-friendly meal management.
+The **SupResto** is a comprehensive solution designed to modernize university canteen operations by replacing traditional paper-based meal tickets with a fully digital system. The system leverages existing student ID QR codes (containing CIN - Citizen Identity Number) to provide secure, efficient, and environmentally-friendly meal management.
 
 ### Core Problem Statement
 Traditional paper ticket systems (10 tickets for 2 TND) are inefficient, prone to abuse, environmentally harmful, and require manual cutting/stamping processes. This digital solution addresses these issues while maintaining accessibility and operational continuity even during network outages.

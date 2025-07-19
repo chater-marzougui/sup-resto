@@ -20,6 +20,6 @@ export const userRoleEnum = pgEnum(
     Object.values(RoleEnum).filter((value) => typeof value === "string") as [string, ...string[]]
 );
 
-export const mealTimeEnum = pgEnum('meal_time', ['lunch', 'dinner']);
+export const mealTypeEnum = pgEnum('meal_time', ['lunch', 'dinner']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['purchase', 'refund', 'meal_redemption', 'balance_adjustment']);
 export const scheduleStatusEnum = pgEnum('schedule_status', ['scheduled', 'refunded', 'cancelled', 'redeemed', 'expired']);

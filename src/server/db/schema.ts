@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, integer, boolean, pgEnum, decimal, index, unique, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
-import { mealTimeEnum, scheduleStatusEnum, transactionTypeEnum, userRoleEnum } from './enums';
+import { mealTypeEnum, scheduleStatusEnum, transactionTypeEnum, userRoleEnum } from './enums';
 
 // Type definitions for JSON fields
 export type StatusHistoryEntry = {
@@ -32,7 +32,7 @@ export const users = pgTable('users', {
 export const mealSchedules = pgTable('meal_schedules', {
   id: text('id').$defaultFn(() => createId()).primaryKey(),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  mealTime: mealTimeEnum('meal_time').notNull(),
+  mealTime: mealTypeEnum('meal_time').notNull(),
   scheduledDate: timestamp('scheduled_date').notNull(),
   status: scheduleStatusEnum('schedule_status').notNull().default('scheduled'),
   statusHistory: jsonb('status_history').$type<StatusHistoryEntry[]>().default([]),
