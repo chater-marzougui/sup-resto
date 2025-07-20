@@ -157,61 +157,61 @@ export async function getFakeElements(seedUsers: seedUsers) {
         ];
 
     const transactionData = [
-        // Purchase transactions
+        // meal_schedule transactions
         {
             userId: students[0].id,
-            type: 'purchase' as const,
-            amount: '25.00',
+            type: 'meal_schedule' as const,
+            amount: '2500',
             processedBy: paymentStaff.id,
         },
         {
             userId: students[1].id,
-            type: 'purchase' as const,
-            amount: '20.00',
+            type: 'meal_schedule' as const,
+            amount: '2000',
             processedBy: paymentStaff.id,
         },
         {
             userId: students[2].id,
-            type: 'purchase' as const,
-            amount: '15.00',
+            type: 'meal_schedule' as const,
+            amount: '1500',
             processedBy: paymentStaff.id,
         },
         {
             userId: students[3].id,
-            type: 'purchase' as const,
-            amount: '30.00',
+            type: 'meal_schedule' as const,
+            amount: '3000',
             processedBy: paymentStaff.id,
         },
         {
             userId: teachers[0].id,
-            type: 'purchase' as const,
-            amount: '35.00',
+            type: 'meal_schedule' as const,
+            amount: '3500',
             processedBy: paymentStaff.id,
         },
         {
             userId: teachers[1].id,
-            type: 'purchase' as const,
-            amount: '40.00',
+            type: 'meal_schedule' as const,
+            amount: '4000',
             processedBy: paymentStaff.id,
         },
         {
             userId: normalUsers[0].id,
-            type: 'purchase' as const,
-            amount: '10.00',
+            type: 'meal_schedule' as const,
+            amount: '1000',
             processedBy: paymentStaff.id,
         },
         
         // Meal redemption transactions
         {
             userId: students[0].id,
-            type: 'meal_redemption' as const,
-            amount: '-2.50',
+            type: 'balance_recharge' as const,
+            amount: '6600',
             processedBy: verificationStaff.id,
         },
         {
             userId: students[1].id,
-            type: 'meal_redemption' as const,
-            amount: '-2.50',
+            type: 'balance_recharge' as const,
+            amount: '4000',
             processedBy: verificationStaff.id,
         },
         
@@ -219,7 +219,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
         {
             userId: students[2].id,
             type: 'refund' as const,
-            amount: '2.50',
+            amount: '200',
             processedBy: paymentStaff.id,
         },
         
@@ -227,7 +227,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
         {
             userId: students[4].id,
             type: 'balance_adjustment' as const,
-            amount: '-10.00',
+            amount: '-1000',
             processedBy: adminUser.id,
         },
         ];

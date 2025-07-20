@@ -9,8 +9,8 @@ export const createTransactionValidator = z.object({
   processedBy: z.string().min(1, "Processor ID is required").optional(),
 });
 
-// Bulk purchase validator for meal credits
-export const bulkPurchaseValidator = z.object({
+// Bulk schedule validator for meal credits
+export const bulkScheduleValidator = z.object({
   userId: z.string().min(1, "User ID is required"),
   amount: z.number().positive("Amount must be positive"),
   processedBy: z.string().min(1, "Processor ID is required"),
@@ -94,7 +94,7 @@ export const userTransactionHistoryValidator = z.object({
 
 // Export types
 export type CreateTransactionInput = z.infer<typeof createTransactionValidator>;
-export type BulkPurchaseInput = z.infer<typeof bulkPurchaseValidator>;
+export type BulkScheduleInput = z.infer<typeof bulkScheduleValidator>;
 export type RefundTransactionInput = z.infer<typeof refundTransactionValidator>;
 export type BalanceAdjustmentInput = z.infer<typeof balanceAdjustmentValidator>;
 export type TransactionFiltersInput = z.infer<typeof transactionFiltersValidator>;

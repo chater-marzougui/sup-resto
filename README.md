@@ -91,7 +91,7 @@ Traditional paper ticket systems (10 tickets for 2 TND for Students and 20 TND f
 
 #### `meal-management/` (Planned Directory)
 **Components**:
-- `meal-purchase.tsx`: Ticket buying interface
+- `meal-schedule.tsx`: Ticket buying interface
 - `meal-scheduler.tsx`: Advance meal booking system
 - `qr-scanner.tsx`: QR code scanning for check-ins
 - `balance-display.tsx`: Account balance and transaction history

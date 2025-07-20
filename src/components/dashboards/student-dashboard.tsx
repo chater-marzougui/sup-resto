@@ -14,7 +14,6 @@ const StudentDashboardComponent = (props: StudentDashboardProps) => {
   const mockData = {
     balance: 15.50,
     scheduledMeals: 3,
-    lastPurchase: '2 days ago',
     upcomingMeal: 'Tomorrow - Lunch'
   };
 
@@ -84,7 +83,7 @@ const StudentDashboardComponent = (props: StudentDashboardProps) => {
           <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
         </div>
         <div className="p-6">
-          <p className="text-gray-500">No recent activities. Purchase some meals to get started!</p>
+          <p className="text-gray-500">No recent activities. Charge your account to get started!</p>
         </div>
       </div>
     </DashboardLayout>

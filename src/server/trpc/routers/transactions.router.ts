@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { TransactionService } from "../services/transactions-service";
 import {
   createTransactionValidator,
-  bulkPurchaseValidator,
+  bulkScheduleValidator,
   refundTransactionValidator,
   balanceAdjustmentValidator,
   paginatedTransactionsValidator,
@@ -14,7 +14,7 @@ import {
   transactionIdValidator,
   userTransactionHistoryValidator,
 } from "../validators/transactions-validator";
-import { RoleEnum } from "@/server/db/enums";
+import { RoleEnum, transactionTypeEnum } from "@/server/db/enums";
 
 export const transactionRouter = createTRPCRouter({
   /**
@@ -24,17 +24,27 @@ export const transactionRouter = createTRPCRouter({
     .input(createTransactionValidator)
     .mutation(async ({ ctx, input }) => {
       try {
-        // For meal redemption, anyone can redeem their own meals
+        // For meal redemption, only verification staff can redempt meals
         // For other types, require staff permissions
-        if (input.type !== 'meal_redemption' && ctx.user?.role && ctx.user.role > 2) {
+        if (input.type === 'meal_redemption' && ctx.user?.role && ctx.user?.role >= RoleEnum.verificationStaff) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Insufficient permissions to create this transaction type',
+            message: 'Only verification staff can redeem meals',
           });
         }
 
+        if (input.type === 'balance_adjustment' || input.type === 'balance_recharge') {
+          // Only admin and staff can adjust balance or recharge
+          if (!ctx.user?.role || ctx.user.role > RoleEnum.verificationStaff) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Only administrators or staff can adjust balances or recharge',
+            });
+          }
+        }
+
         // Ensure user can only create transactions for themselves unless they're staff
-        if (input.userId !== ctx.user?.id && ctx.user?.role && ctx.user.role > 2) {
+        if (input.userId !== ctx.user?.id && ctx.user?.role && ctx.user.role > RoleEnum.verificationStaff) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Cannot create transactions for other users',
@@ -60,33 +70,33 @@ export const transactionRouter = createTRPCRouter({
     }),
 
   /**
-   * Process bulk meal credit purchase (staff only)
+   * Process bulk meal credit Schedule (staff only)
    */
-  processBulkPurchase: protectedProcedure
-    .input(bulkPurchaseValidator)
+  processBulkSchedule: protectedProcedure
+    .input(bulkScheduleValidator)
     .mutation(async ({ ctx, input }) => {
       // Check if user is staff (payment or verification staff, or admin)
       if (ctx.user?.role && ctx.user.role > 2) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only staff members can process bulk purchases',
+          message: 'Only staff members can process bulk meal schedules',
         });
       }
 
       try {
-        const purchaseInput = {
+        const scheduleInput = {
           ...input,
           processedBy: ctx.user?.id || input.processedBy,
         };
 
-        return await TransactionService.processBulkPurchase(purchaseInput);
+        return await TransactionService.processBulkSchedule(scheduleInput);
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to process bulk purchase',
+          message: 'Failed to process bulk schedule',
           cause: error,
         });
       }
@@ -233,7 +243,7 @@ export const transactionRouter = createTRPCRouter({
     .input(z.object({
       limit: z.number().min(1).max(100).default(20),
       offset: z.number().min(0).default(0),
-      type: z.enum(['purchase', 'refund', 'meal_redemption', 'balance_adjustment']).optional(),
+      type: z.enum(Object.values(transactionTypeEnum)).optional(),
     }))
     .query(async ({ ctx, input }) => {
       try {

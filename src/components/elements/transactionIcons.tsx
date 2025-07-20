@@ -1,4 +1,4 @@
-import { CreditCard, DollarSign, Settings, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, DollarSign, Settings, CheckCircle, AlertCircle, Calendar1Icon } from 'lucide-react';
 import { transactionTypeEnum } from '@/server/db/enums';
 
 export const getTransactionIcon = (
@@ -8,14 +8,16 @@ export const getTransactionIcon = (
 ) => {
     const Icon = (() => {
         switch (type) {
-            case 'purchase':
+            case 'balance_recharge':
                 return CreditCard;
+            case 'meal_schedule':
+                return Calendar1Icon;
             case 'meal_redemption':
-                return DollarSign;
+                return CheckCircle;
             case 'balance_adjustment':
                 return Settings;
             case 'refund':
-                return CheckCircle;
+                return DollarSign;
             default:
                 return AlertCircle;
         }

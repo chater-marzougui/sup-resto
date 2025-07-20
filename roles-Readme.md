@@ -6,12 +6,12 @@
 - Today's Scheduled Meals (breakfast, lunch, dinner status)
 - Quick Actions: Schedule meal for today/tomorrow, Cancel meal
 - Weekly meal calendar view (shows scheduled vs available meals)
-- Recent transactions (last 5-10 payments/purchases)
+- Recent transactions (last 5-10 payments/schedules/refunds)
 - Low balance warning (when below 2-3 meals worth)
 
 ### Additional Pages/Features
 - Meal Scheduling Page: Calendar interface to book meals up to 7 days ahead
-- Transaction History: Full payment and meal purchase history with filters
+- Transaction History: Full payment and meal schedule history with filters
 - Profile Settings: Change password, update contact info
 - Meal History: Past consumed meals with dates
 - Emergency Credit: Request advance credit when balance is zero

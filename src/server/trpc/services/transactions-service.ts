@@ -5,10 +5,9 @@ import { mealSchedules, transactions, users } from "@/server/db/schema";
 import { transactionTypeEnum } from "@/server/db/enums";
 import type {
   CreateTransactionInput,
-  BulkPurchaseInput,
+  BulkScheduleInput,
   RefundTransactionInput,
   BalanceAdjustmentInput,
-  TransactionFiltersInput,
   PaginatedTransactionsInput,
   TransactionStatsInput,
   BulkBalanceUpdateInput,
@@ -41,7 +40,10 @@ export class TransactionService {
 
         // Calculate new balance based on transaction type
         switch (input.type) {
-          case 'purchase':
+          case 'balance_recharge':
+            newBalance = currentBalance + Math.floor(input.amount);
+            break;
+          case 'meal_schedule':
             newBalance = currentBalance - Math.floor(input.amount);
             break;
           case 'refund':
@@ -50,6 +52,15 @@ export class TransactionService {
           case 'balance_adjustment':
             newBalance = currentBalance + Math.floor(input.amount);
             break;
+          case 'meal_redemption':
+            // for meal redemption, it's free since the scheduled meal is already paid
+            newBalance = currentBalance; // No change in balance
+            break;
+          default:
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Invalid transaction type',
+            });
         }
 
         // Create transaction record
@@ -85,9 +96,9 @@ export class TransactionService {
   }
 
   /**
-   * Process bulk meal credit purchase
+   * Process bulk meal credit Schedule
    */
-  static async processBulkPurchase(input: BulkPurchaseInput) {
+  static async processBulkSchedule(input: BulkScheduleInput) {
     const user = await db.query.users.findFirst({
       where: eq(users.id, input.userId),
       columns: { balance: true, role: true },
@@ -106,13 +117,13 @@ export class TransactionService {
     if (user.balance < totalCost) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Insufficient balance for bulk purchase',
+        message: 'Insufficient balance for meals schedule',
       });
     }
 
     return await this.createTransaction({
       userId: input.userId,
-      type: 'purchase',
+      type: 'meal_schedule',
       amount: totalCost,
       processedBy: input.processedBy,
     });
