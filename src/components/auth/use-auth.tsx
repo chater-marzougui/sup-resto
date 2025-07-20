@@ -7,6 +7,7 @@ import { AuthUser } from '@/server/trpc/services/auth-service';
 
 interface AuthContextType {
   user: AuthUser | null;
+  refetchUser: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (cin: string, password: string) => Promise<any>;
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logoutMutation = trpc.auth.logout.useMutation();
 
   // Only fetch user data once during initialization
-  const { data: userData, isLoading: userDataLoading } = trpc.auth.me.useQuery(undefined, {
+  const { data: userData, isLoading: userDataLoading, refetch: refetchUser } = trpc.auth.me.useQuery(undefined, {
     enabled: !hasInitialized && isBrowser && !!localStorage.getItem('auth_token'),
     retry: (failureCount, error: any) => {
       if (error?.data?.code === 'UNAUTHORIZED') {
@@ -186,6 +187,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const contextValue: AuthContextType = {
     user,
+    refetchUser,
     isLoading: isLoading || userDataLoading,
     isAuthenticated,
     login,

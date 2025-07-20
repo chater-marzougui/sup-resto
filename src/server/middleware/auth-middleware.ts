@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { AuthService } from "@/server/trpc/services/auth-service";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
+import { RoleEnum } from "../db/enums";
 
 export interface AuthContext {
   user?: {
@@ -59,7 +60,7 @@ export const enforceUserIsAdmin = (ctx: AuthContext) => {
   const authedCtx = enforceUserIsAuthed(ctx);
   
   // Check if user has admin privileges (role 1 or 2)
-  if (authedCtx.user?.role !== 1 && authedCtx.user?.role !== 2) {
+  if (authedCtx.user?.role === RoleEnum.admin || authedCtx.user?.role === RoleEnum.paymentStaff) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Admin access required',
@@ -73,7 +74,7 @@ export const enforceUserIsSuperAdmin = (ctx: AuthContext) => {
   const authedCtx = enforceUserIsAuthed(ctx);
   
   // Check if user has super admin privileges (role 1)
-  if (authedCtx.user?.role !== 1) {
+  if (authedCtx.user?.role !== RoleEnum.admin) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Super admin access required',

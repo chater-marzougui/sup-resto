@@ -1,6 +1,6 @@
 "use client";
 
-import { Languages, LoaderCircle } from "lucide-react";
+import { Languages, Link, LoaderCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     DropdownMenu,
@@ -53,16 +53,27 @@ export function NavUser() {
     const router = useRouter();
     const { theme, setTheme } = UseTheme();
     const { user: data } = useAuth();
+
     const handleLogout = (e: any) => {
         e.preventDefault();
         setIsLoading(true);
-        router.push("/auth/logout");
+        goToPage("/auth/logout");
     };
+
+    const goToPage = (page: string) => {
+        router.push(page);
+    }
+
+    const goToProfile = () => {
+        router.push("/profile");
+    }
+
     const handleLanguageChange = (language: string) => {
         i18n.changeLanguage(language);
         localStorage.setItem("locale", language);
         window.location.reload();
     };
+
     return (
         <div className="flex items-center gap-2 cursor-pointer">    
             <SidebarMenu>
@@ -119,8 +130,10 @@ export function NavUser() {
 
                                 <DropdownMenuSub>
                                     <DropdownMenuSubTrigger className="dark:hover:text-accent-foreground">
-                                        Language
-                                        <Languages className="ml-auto h-[1.2rem] w-[1.2rem]" />
+                                        <span className="flex flex-1 items-center gap-2">
+                                            Language
+                                            <Languages className="ml-auto h-[1.2rem] w-[1.2rem]" />
+                                        </span>
                                     </DropdownMenuSubTrigger>
                                     <DropdownMenuPortal>
                                         <DropdownMenuSubContent>
@@ -144,7 +157,7 @@ export function NavUser() {
                                         </DropdownMenuSubContent>
                                     </DropdownMenuPortal>
                                 </DropdownMenuSub>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={goToProfile}>
                                     <div className="flex w-full justify-between">
                                         <span>Profile</span>
                                         <PersonIcon className="h-[1.2rem] w-[1.2rem]" />
