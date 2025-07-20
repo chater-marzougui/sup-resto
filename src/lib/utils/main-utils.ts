@@ -30,7 +30,7 @@ export const getTransactionColor = (type: typeof transactionTypeEnum.enumValues[
 };
 
 export const formatCurrency = (amount: number): string => {
-  return `${amount.toFixed(2)} TND`;
+  return `${(amount / 1000).toFixed(2)} TND`;
 };
 
 export const formatDate = (dateString: string | Date): string => {

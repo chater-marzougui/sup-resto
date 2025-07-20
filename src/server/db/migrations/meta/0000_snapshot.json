@@ -1,5 +1,5 @@
 {
-  "id": "a1183d43-916d-4d3f-86f9-24b3ec5ae44d",
+  "id": "6e259bba-71e8-4e26-9219-3636f7faa823",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -137,6 +137,31 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.settings": {
+      "name": "settings",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -557,7 +582,8 @@
       "name": "transaction_type",
       "schema": "public",
       "values": [
-        "purchase",
+        "balance_recharge",
+        "meal_schedule",
         "refund",
         "meal_redemption",
         "balance_adjustment"

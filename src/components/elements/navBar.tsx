@@ -6,6 +6,7 @@ import { RoleEnum } from "@/server/db/enums";
 import { NavUser } from "./navUser";
 import { Bell, Wifi, WifiOff } from "lucide-react";
 import React from "react";
+import { getRoleNameByNumber } from "@/lib/utils/main-utils";
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -140,7 +141,7 @@ export function Navbar() {
                   Hello, {user?.firstName} {user?.lastName}
                 </span>
                 <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                  {user?.role}
+                  {getRoleNameByNumber(user?.role ?? RoleEnum.normalUser)}
                 </span>
                 <Bell className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
                 <NavUser />

@@ -2,33 +2,28 @@
 
 ## 👨‍🎓 STUDENT Dashboard
 ### Dashboard Overview
-- Current Balance (large, prominent display in millimes)
+- Current Balance (TND not dollar sign)
 - Today's Scheduled Meals (breakfast, lunch, dinner status)
 - Quick Actions: Schedule meal for today/tomorrow, Cancel meal
 - Weekly meal calendar view (shows scheduled vs available meals)
 - Recent transactions (last 5-10 payments/schedules/refunds)
 - Low balance warning (when below 2-3 meals worth)
+- Monthly spending summary
+- Menu
 
 ### Additional Pages/Features
-- Meal Scheduling Page: Calendar interface to book meals up to 7 days ahead
+- Meal Scheduling Page: Calendar interface to book meals up to saturday
 - Transaction History: Full payment and meal schedule history with filters
 - Profile Settings: Change password, update contact info
-- Meal History: Past consumed meals with dates
-- Emergency Credit: Request advance credit when balance is zero
 - QR Code Display: Show personal QR code for scanning
 
 ## 👨‍🏫 TEACHER Dashboard
 ### Dashboard Overview
-- Same as Student but with teacher-specific pricing display
-- Current Balance (showing 2000 millime meal pricing)
-- Faculty meal times (if different from students)
-- Monthly spending summary (since teachers pay more, budget tracking is important)
+- Exact Same as Student but with teacher-specific pricing display ( teachers  pay 2000 instead of 200 )
+- Ability to eat with students ( with student pricing )
 
 ### Additional Pages/Features
-- Same as Student features with teacher pricing
-- Bulk meal scheduling (schedule entire week at once)
-- Colleague meal scheduling (if allowed to book for other teachers)
-- Faculty dining preferences (if special menus exist)
+- Exact Same as Student features with teacher pricing
 
 ## 💰 PAYMENT STAFF Dashboard
 ### Dashboard Overview
