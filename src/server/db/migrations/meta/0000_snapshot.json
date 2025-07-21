@@ -1,5 +1,5 @@
 {
-  "id": "6e259bba-71e8-4e26-9219-3636f7faa823",
+  "id": "c51ed774-79a8-4b58-8978-c3bde29ab10b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -307,7 +307,7 @@
         },
         "amount": {
           "name": "amount",
-          "type": "numeric(10, 2)",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -571,6 +571,7 @@
       "name": "schedule_status",
       "schema": "public",
       "values": [
+        "not_created",
         "scheduled",
         "refunded",
         "cancelled",

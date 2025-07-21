@@ -13,6 +13,7 @@ import {
   bulkBalanceUpdateValidator,
   transactionIdValidator,
   userTransactionHistoryValidator,
+  baseTransactionValidator,
 } from "../validators/transactions-validator";
 import { RoleEnum, transactionTypeEnum } from "@/server/db/enums";
 
@@ -213,6 +214,7 @@ export const transactionRouter = createTRPCRouter({
    */
   getUserTransactionHistory: protectedProcedure
     .input(userTransactionHistoryValidator)
+    .output(z.array(baseTransactionValidator))
     .query(async ({ ctx, input }) => {
       try {
         // Users can view their own history, staff can view any history

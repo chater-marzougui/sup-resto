@@ -8,13 +8,11 @@ import { AlertTriangle, CreditCard } from 'lucide-react';
 interface LowBalanceAlertProps {
   currentBalance: number;
   mealPrice: number;
-  onRechargeClick: () => void;
 }
 
 export const LowBalanceAlert: React.FC<LowBalanceAlertProps> = ({
   currentBalance,
-  mealPrice,
-  onRechargeClick
+  mealPrice
 }) => {
   const mealsLeft = Math.floor(currentBalance / mealPrice);
   const shouldShowAlert = mealsLeft <= 2;
@@ -28,14 +26,6 @@ export const LowBalanceAlert: React.FC<LowBalanceAlertProps> = ({
         <span className="text-yellow-800">
           Low balance! You can only afford {mealsLeft} more meal{mealsLeft !== 1 ? 's' : ''}.
         </span>
-        <Button 
-          size="sm" 
-          onClick={onRechargeClick}
-          className="bg-yellow-600 hover:bg-yellow-700 text-white"
-        >
-          <CreditCard className="h-4 w-4 mr-1" />
-          Recharge Now
-        </Button>
       </AlertDescription>
     </Alert>
   );

@@ -1,18 +1,29 @@
 import { z } from "zod";
 import { transactionTypeEnum } from "@/server/db/enums";
 
+const amountValidator = z.number();
+
+export const baseTransactionValidator = z.object({
+  id: z.string().min(1, "Transaction ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+  type: z.enum(transactionTypeEnum.enumValues, "Invalid transaction type"),
+  amount: amountValidator,
+  processedBy: z.string().min(1, "Processor ID is required").optional().nullable(),
+  createdAt: z.date(),
+});
+
 // Create transaction validator
 export const createTransactionValidator = z.object({
   userId: z.string().min(1, "User ID is required"),
   type: z.enum(transactionTypeEnum.enumValues),
-  amount: z.number().positive("Amount must be positive"),
+  amount: amountValidator,
   processedBy: z.string().min(1, "Processor ID is required").optional(),
 });
 
 // Bulk schedule validator for meal credits
 export const bulkScheduleValidator = z.object({
   userId: z.string().min(1, "User ID is required"),
-  amount: z.number().positive("Amount must be positive"),
+  amount: amountValidator,
   processedBy: z.string().min(1, "Processor ID is required"),
 });
 
@@ -20,15 +31,14 @@ export const bulkScheduleValidator = z.object({
 export const refundTransactionValidator = z.object({
   userId: z.string().min(1, "User ID is required"),
   scheduledMealId: z.string().min(1, "Meal ID is required"),
-  amount: z.number().positive("Refund amount must be positive"),
-  reason: z.string().min(1, "Refund reason is required").optional(),
+  amount: amountValidator,
   processedBy: z.string().min(1, "Processor ID is required"),
 });
 
 // Balance adjustment validator (admin only)
 export const balanceAdjustmentValidator = z.object({
   userId: z.string().min(1, "User ID is required"),
-  amount: z.number("Amount is required"), // Can be positive or negative
+  amount: amountValidator, // Can be positive or negative
   reason: z.string().min(1, "Adjustment reason is required"),
   processedBy: z.string().min(1, "Processor ID is required"),
 });
@@ -93,6 +103,7 @@ export const userTransactionHistoryValidator = z.object({
 });
 
 // Export types
+export type BaseTransaction = z.infer<typeof baseTransactionValidator>;
 export type CreateTransactionInput = z.infer<typeof createTransactionValidator>;
 export type BulkScheduleInput = z.infer<typeof bulkScheduleValidator>;
 export type RefundTransactionInput = z.infer<typeof refundTransactionValidator>;

@@ -1,21 +1,7 @@
-import { RoleEnum } from '../enums';
+import { RoleEnum, MealType, ScheduleStatusType } from '../enums';
 import bcrypt from 'bcrypt';
 import type { StatusHistoryEntry } from '../schema';
-
-
-const statusTypeEnum = {
-  scheduled: 'scheduled',
-  refunded: 'refunded',
-  cancelled: 'cancelled',
-  redeemed: 'redeemed',
-  expired: 'expired',
-} as const;
-
-
-const mealTypeEnum = {
-  lunch: 'lunch',
-  dinner: 'dinner',
-} as const;
+import { mealTimeEnum } from '@/config/global-config';
 
 type seedUsers = {
     id: string;
@@ -32,6 +18,24 @@ type seedUsers = {
     updatedAt: Date;
 }[]
 
+
+const saltRounds = 10;
+
+const today = new Date(new Date().setHours(1, 0, 0, 0));
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 1);
+const dayAfterTomorrow = new Date(today);
+dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+const formatDate = (date: Date, mealType: MealType): Date => {
+    if (mealType === 'lunch') {
+        return new Date(date.setHours(...mealTimeEnum[0])); // Set to noon
+    } else if (mealType === 'dinner') {
+        return new Date(date.setHours(...mealTimeEnum[1])); // Set to evening
+    }
+    return date;
+}
+
 export async function getFakeElements(seedUsers: seedUsers) {
     
     const adminUser = seedUsers.find(u => u.role === RoleEnum.admin)!;
@@ -41,117 +45,123 @@ export async function getFakeElements(seedUsers: seedUsers) {
     const teachers = seedUsers.filter(u => u.role === RoleEnum.teacher);
     const normalUsers = seedUsers.filter(u => u.role === RoleEnum.normalUser);
 
-    const mealScheduleData = [
+    const mealScheduleData: {
+        userId: string;
+        mealTime: MealType;
+        scheduledDate: Date;
+        status: ScheduleStatusType;
+        statusHistory: StatusHistoryEntry[];
+    }[] = [
         // Today's meals (some redeemed)
         {
             userId: students[0].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: today,
-            status: statusTypeEnum.redeemed,
+            mealTime: "lunch",
+            scheduledDate: formatDate(today, "lunch"),
+            status: "redeemed",
             statusHistory: statusHistoryRedeemed,
         },
         {
             userId: students[0].id,
-            mealTime: mealTypeEnum.dinner,
-            scheduledDate: today,
-            status: statusTypeEnum.scheduled,
+            mealTime: "dinner",
+            scheduledDate: formatDate(today, "dinner"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: students[1].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: today,
-            status: statusTypeEnum.redeemed,
+            mealTime: "lunch",
+            scheduledDate: formatDate(today, "lunch"),
+            status: "redeemed",
             statusHistory: statusHistoryRedeemed,
         },
         {
             userId: teachers[0].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: today,
-            status: statusTypeEnum.scheduled,
+            mealTime: "lunch",
+            scheduledDate: formatDate(today, "lunch"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         
         // Tomorrow's meals
         {
             userId: students[0].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: tomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "lunch",
+            scheduledDate: formatDate(tomorrow, "lunch"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: students[0].id,
-            mealTime: mealTypeEnum.dinner,
-            scheduledDate: tomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "dinner",
+            scheduledDate: formatDate(tomorrow, "dinner"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: students[1].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: tomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "lunch",
+            scheduledDate: formatDate(tomorrow, "lunch"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: students[1].id,
-            mealTime: mealTypeEnum.dinner,
-            scheduledDate: tomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "dinner",
+            scheduledDate: formatDate(tomorrow, "dinner"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: students[2].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: tomorrow,
-            status: statusTypeEnum.cancelled,
+            mealTime: "lunch",
+            scheduledDate: formatDate(tomorrow, "lunch"),
+            status: "cancelled",
             statusHistory: [
             {
-                status: statusTypeEnum.scheduled,
+                status: "scheduled",
                 timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
             },
             {
-                status: statusTypeEnum.cancelled,
+                status: "cancelled",
                 timestamp: new Date().toISOString(),
             }
             ],
         },
         {
             userId: teachers[0].id,
-            mealTime: mealTypeEnum.dinner,
-            scheduledDate: tomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "dinner",
+            scheduledDate: formatDate(tomorrow, "dinner"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: teachers[1].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: tomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "lunch",
+            scheduledDate: formatDate(tomorrow, "lunch"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         
         // Day after tomorrow
         {
             userId: students[3].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: dayAfterTomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "lunch",
+            scheduledDate: formatDate(dayAfterTomorrow, "lunch"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: students[3].id,
-            mealTime: mealTypeEnum.dinner,
-            scheduledDate: dayAfterTomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "dinner",
+            scheduledDate: formatDate(dayAfterTomorrow, "dinner"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         {
             userId: normalUsers[0].id,
-            mealTime: mealTypeEnum.lunch,
-            scheduledDate: dayAfterTomorrow,
-            status: statusTypeEnum.scheduled,
+            mealTime: "lunch",
+            scheduledDate: formatDate(dayAfterTomorrow, "lunch"),
+            status: "scheduled",
             statusHistory: statusHistoryScheduled,
         },
         ];
@@ -161,43 +171,43 @@ export async function getFakeElements(seedUsers: seedUsers) {
         {
             userId: students[0].id,
             type: 'meal_schedule' as const,
-            amount: '2500',
+            amount: 2500,
             processedBy: paymentStaff.id,
         },
         {
             userId: students[1].id,
             type: 'meal_schedule' as const,
-            amount: '2000',
+            amount: 2000,
             processedBy: paymentStaff.id,
         },
         {
             userId: students[2].id,
             type: 'meal_schedule' as const,
-            amount: '1500',
+            amount: 1500,
             processedBy: paymentStaff.id,
         },
         {
             userId: students[3].id,
             type: 'meal_schedule' as const,
-            amount: '3000',
+            amount: 3000,
             processedBy: paymentStaff.id,
         },
         {
             userId: teachers[0].id,
             type: 'meal_schedule' as const,
-            amount: '3500',
+            amount: 3500,
             processedBy: paymentStaff.id,
         },
         {
             userId: teachers[1].id,
             type: 'meal_schedule' as const,
-            amount: '4000',
+            amount: 4000,
             processedBy: paymentStaff.id,
         },
         {
             userId: normalUsers[0].id,
             type: 'meal_schedule' as const,
-            amount: '1000',
+            amount: 1000,
             processedBy: paymentStaff.id,
         },
         
@@ -205,13 +215,13 @@ export async function getFakeElements(seedUsers: seedUsers) {
         {
             userId: students[0].id,
             type: 'balance_recharge' as const,
-            amount: '6600',
+            amount: 6600,
             processedBy: verificationStaff.id,
         },
         {
             userId: students[1].id,
             type: 'balance_recharge' as const,
-            amount: '4000',
+            amount: 4000,
             processedBy: verificationStaff.id,
         },
         
@@ -219,7 +229,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
         {
             userId: students[2].id,
             type: 'refund' as const,
-            amount: '200',
+            amount: 200,
             processedBy: paymentStaff.id,
         },
         
@@ -227,7 +237,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
         {
             userId: students[4].id,
             type: 'balance_adjustment' as const,
-            amount: '-1000',
+            amount: -1000,
             processedBy: adminUser.id,
         },
         ];
@@ -282,28 +292,21 @@ export async function getFakeElements(seedUsers: seedUsers) {
     syncLogData,
   };
 }
-const saltRounds = 10;
-
-const today = new Date();
-const tomorrow = new Date(today);
-tomorrow.setDate(tomorrow.getDate() + 1);
-const dayAfterTomorrow = new Date(today);
-dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
 const statusHistoryScheduled: StatusHistoryEntry[] = [
     {
-    status: statusTypeEnum.scheduled, 
+    status: "scheduled", 
     timestamp: new Date().toISOString(),
     }
 ];
 
 const statusHistoryRedeemed: StatusHistoryEntry[] = [
     {
-        status: statusTypeEnum.scheduled,
+        status: "scheduled",
         timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     },
     {
-        status: statusTypeEnum.redeemed, 
+        status: "redeemed", 
         timestamp: new Date().toISOString(),
     }
 ];

@@ -26,15 +26,15 @@ export const mealRouter = createTRPCRouter({
           ...input,
           userId: ctx.user?.id || input.userId,
         };
-        
+
         return await MealService.scheduleMeal(mealInput);
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to schedule meal',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to schedule meal",
           cause: error,
         });
       }
@@ -53,8 +53,8 @@ export const mealRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to schedule meals',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to schedule meals",
           cause: error,
         });
       }
@@ -70,8 +70,8 @@ export const mealRouter = createTRPCRouter({
         return await MealService.getUserMeals(input.userId, input);
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch user meals',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch user meals",
           cause: error,
         });
       }
@@ -84,19 +84,20 @@ export const mealRouter = createTRPCRouter({
     .input(paginatedMealsValidator)
     .query(async ({ ctx, input }) => {
       // Check if user is admin
-      if (ctx.user?.role !== 1) { // Assuming 1 is admin role
+      if (ctx.user?.role !== 1) {
+        // Assuming 1 is admin role
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators can view all meals',
+          code: "FORBIDDEN",
+          message: "Only administrators can view all meals",
         });
       }
-      
+
       try {
         return await MealService.getAllMeals(input);
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch all meals',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch all meals",
           cause: error,
         });
       }
@@ -115,8 +116,8 @@ export const mealRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to cancel meal',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to cancel meal",
           cause: error,
         });
       }
@@ -129,13 +130,14 @@ export const mealRouter = createTRPCRouter({
     .input(updateMealStatusValidator)
     .mutation(async ({ ctx, input }) => {
       // Check if user is admin
-      if (ctx.user?.role !== 1) { // Assuming 1 is admin role
+      if (ctx.user?.role !== 1) {
+        // Assuming 1 is admin role
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators can update meal status',
+          code: "FORBIDDEN",
+          message: "Only administrators can update meal status",
         });
       }
-      
+
       try {
         return await MealService.updateMealStatus(input);
       } catch (error) {
@@ -143,57 +145,79 @@ export const mealRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update meal status',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update meal status",
           cause: error,
         });
       }
     }),
 
-    getTodayMeals: protectedProcedure
-    .query(async ({ ctx }) => {
-      // Check if user is admin or kitchen staff
-      if (ctx.user?.role && ctx.user.role < 3) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators and staff can view today\'s meals',
-        });
-      }
-      
-      try {
-        return await MealService.getTodayMeals();
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch today\'s meals',
-          cause: error,
-        });
-      }
-    }),
+  getDayMeals: protectedProcedure
+  .input(z.object({
+     userId: z.string().optional(),
+     isToday: z.boolean().default(true) 
+    }).optional())
+  .query(async ({ ctx, input }) => {
+    // Check if user is admin or kitchen staff
+    if (ctx.user?.role && ctx.user.role < 3) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only administrators and staff can view today's meals",
+      });
+    }
+
+    if (!ctx.user?.id) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "You must be logged in to view today's meals",
+      });
+    }
+
+    let modifiedInput = {
+      userId: input?.userId || ctx.user?.id,
+      isToday: input?.isToday ?? true,
+    };
+
+    console.log('Fetching meals for:', modifiedInput);
+
+    try {
+      return await MealService.getDayMeals(modifiedInput);
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch today's meals",
+        cause: error,
+      });
+    }
+  }),
 
   /**
    * Get this week's meals
    */
   getWeekMeals: protectedProcedure
-    .query(async ({ ctx }) => {
-      // Check if user is admin or kitchen staff
-      if (ctx.user?.role && ctx.user.role < 3) { // Assuming 1 is admin, 2 is kitchen staff
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators and staff can view weekly meals',
-        });
-      }
-      
-      try {
-        return await MealService.getWeekMeals();
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch weekly meals',
-          cause: error,
-        });
-      }
-    }),
+  .input(z.object({
+    userId: z.string().optional(),
+  }))
+  .query(async ({ ctx, input }) => {
+    // Check if user is admin or kitchen staff
+    if (ctx.user?.role && ctx.user.role < 3 && !input.userId && input.userId !== ctx.user?.id) {
+      // Assuming 1 is admin, 2 is kitchen staff
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only administrators and staff can view weekly meals",
+      });
+    }
+
+    try {
+      return await MealService.getWeekMeals(input);
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch weekly meals",
+        cause: error,
+      });
+    }
+  }),
 
   /**
    * Get meal statistics
@@ -204,15 +228,21 @@ export const mealRouter = createTRPCRouter({
       try {
         // If userId is provided and user is not admin, they can only view their own stats
         const targetUserId = input?.userId;
-        if (targetUserId && targetUserId !== ctx.user?.id && ctx.user?.role !== RoleEnum.admin) {
+        if (
+          targetUserId &&
+          targetUserId !== ctx.user?.id &&
+          ctx.user?.role !== RoleEnum.admin
+        ) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'You can only view your own meal statistics',
+            code: "FORBIDDEN",
+            message: "You can only view your own meal statistics",
           });
         }
-        
+
         // If no userId provided, use current user's ID unless they're admin
-        const statsUserId = targetUserId || (ctx.user?.role === RoleEnum.admin ? undefined : ctx.user?.id);
+        const statsUserId =
+          targetUserId ||
+          (ctx.user?.role === RoleEnum.admin ? undefined : ctx.user?.id);
 
         return await MealService.getMealStats(statsUserId);
       } catch (error) {
@@ -220,8 +250,8 @@ export const mealRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch meal statistics',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch meal statistics",
           cause: error,
         });
       }
@@ -231,36 +261,38 @@ export const mealRouter = createTRPCRouter({
    * Get meals by date range (admin only)
    */
   getMealsByDateRange: protectedProcedure
-    .input(dateRangeValidator.extend({
-      userId: z.string().optional(),
-    }))
+    .input(
+      dateRangeValidator.extend({
+        userId: z.string().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       // Check if user is admin
       if (ctx.user?.role !== RoleEnum.admin) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators can view meals by date range',
+          code: "FORBIDDEN",
+          message: "Only administrators can view meals by date range",
         });
       }
-      
+
       try {
         const filters = {
           startDate: input.startDate,
           endDate: input.endDate,
           userId: input.userId ?? "",
         };
-        
+
         return await MealService.getAllMeals({
           page: 1,
           limit: 1000, // Large limit for date range queries
-          sortBy: 'scheduledDate',
-          sortOrder: 'asc',
+          sortBy: "scheduledDate",
+          sortOrder: "asc",
           ...filters,
         });
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch meals by date range',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch meals by date range",
           cause: error,
         });
       }
@@ -270,28 +302,29 @@ export const mealRouter = createTRPCRouter({
    * Get user's upcoming meals
    */
   getUpcomingMeals: protectedProcedure
-    .input(z.object({ limit: z.number().min(1).max(50).default(10) }).optional())
+    .input(
+      z.object({ limit: z.number().min(1).max(50).default(10) }).optional()
+    )
     .query(async ({ ctx, input }) => {
       try {
-        
         if (!ctx.user) {
-            throw new TRPCError({
-                code: 'UNAUTHORIZED',
-                message: 'You must be logged in to view upcoming meals',
-            });
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "You must be logged in to view upcoming meals",
+          });
         }
 
         const filters = {
           userId: ctx.user?.id,
-          startDate: new Date(),  
-          status: 'scheduled' as const,
+          startDate: new Date(),
+          status: "scheduled" as const,
         };
-        
+
         return await MealService.getUserMeals(ctx.user?.id, filters);
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch upcoming meals',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch upcoming meals",
           cause: error,
         });
       }
@@ -301,33 +334,35 @@ export const mealRouter = createTRPCRouter({
    * Get meal history for user
    */
   getMealHistory: protectedProcedure
-    .input(z.object({ 
-      page: z.number().min(1).default(1),
-      limit: z.number().min(1).max(50).default(20),
-    }).optional())
+    .input(
+      z
+        .object({
+          page: z.number().min(1).default(1),
+          limit: z.number().min(1).max(50).default(20),
+        })
+        .optional()
+    )
     .query(async ({ ctx, input }) => {
       try {
         const { page = 1, limit = 20 } = input || {};
 
-           
         if (!ctx.user) {
-            throw new TRPCError({
-                code: 'UNAUTHORIZED',
-                message: 'You must be logged in to view upcoming meals',
-            });
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "You must be logged in to view upcoming meals",
+          });
         }
 
-        
         const filters = {
           endDate: new Date(),
           userId: ctx.user.id,
         };
-        
+
         return await MealService.getUserMeals(ctx.user.id, filters);
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch meal history',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch meal history",
           cause: error,
         });
       }
@@ -337,40 +372,43 @@ export const mealRouter = createTRPCRouter({
    * Batch update meal statuses (admin only) - useful for marking meals as served
    */
   batchUpdateMealStatus: protectedProcedure
-    .input(z.object({
-      mealIds: z.array(z.string()).min(1, 'At least one meal ID is required'),
-      status: z.enum(scheduleStatusEnum.enumValues, 'Invalid status'),
-    }))
+    .input(
+      z.object({
+        mealIds: z.array(z.string()).min(1, "At least one meal ID is required"),
+        status: z.enum(scheduleStatusEnum.enumValues, "Invalid status"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       // Check if user is admin
-         
+
       if (!ctx.user) {
         throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'You must be logged in to view upcoming meals',
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to view upcoming meals",
         });
       }
 
       if (ctx.user.role < RoleEnum.paymentStaff) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators and payment staff can batch update meal statuses',
+          code: "FORBIDDEN",
+          message:
+            "Only administrators and payment staff can batch update meal statuses",
         });
       }
-      
+
       try {
-        const updatePromises = input.mealIds.map(mealId =>
+        const updatePromises = input.mealIds.map((mealId) =>
           MealService.updateMealStatus({ mealId, status: input.status })
         );
-        
+
         return await Promise.all(updatePromises);
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to batch update meal statuses',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to batch update meal statuses",
           cause: error,
         });
       }
@@ -382,33 +420,32 @@ export const mealRouter = createTRPCRouter({
   getMealById: protectedProcedure
     .input(z.object({ mealId: z.string() }))
     .query(async ({ ctx, input }) => {
-         
       if (!ctx.user) {
         throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'You must be logged in to view upcoming meals',
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to view upcoming meals",
         });
       }
 
       try {
         const meal = await MealService.getMealById(input.mealId);
-        
+
         // Check if user can access this meal
         if (meal.userId !== ctx.user.id && ctx.user.role !== 1) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'You can only view your own meals',
+            code: "FORBIDDEN",
+            message: "You can only view your own meals",
           });
         }
-        
+
         return meal;
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch meal',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch meal",
           cause: error,
         });
       }

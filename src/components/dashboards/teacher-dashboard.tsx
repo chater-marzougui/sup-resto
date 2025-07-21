@@ -21,9 +21,11 @@ import { RoleEnum } from "@/server/db/enums";
 import { StatCard } from "@/components/elements/stat-card";
 import { WeeklyMealCalendar } from "./ui/weekly-meal-calendar";
 import { RecentTransactions } from "./ui/recent-transactions";
-import { TodayMealsCard } from "./ui/today-meals-card";
+import { DayMealsCard } from "./ui/day-meals-card";
 import { QRCodeCard } from "./ui/qr-code-card";
 import { LowBalanceAlert } from "./ui/low-balance-alert";
+import { useProfile } from "@/hooks/use-profile";
+import LoadingSpinner from "../elements/LoadingSpinner";
 
 interface TeacherDashboardProps {}
 
@@ -34,6 +36,10 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
   // const { data: monthlyStats } = api.analytics.getMonthlyStats.useQuery();
   // const scheduleMeal = api.mealSchedules.schedule.useMutation();
   // const cancelMeal = api.mealSchedules.cancel.useMutation();
+  const { user, isLoadingUser, isLoadingTransactions } = useProfile();
+  if (isLoadingUser || isLoadingTransactions) {
+    return <LoadingSpinner />;
+  }
 
   // Mock data - replace with actual data from tRPC
   const mockData = {
@@ -239,11 +245,13 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
           {/* Left Column - Today's Meals & QR */}
           <div className="space-y-6">
             <div className="relative">
-              <TodayMealsCard
+              {/* <DayMealsCard
+                userId={mockData.user.id}
+                isToday={true}
                 meals={mockData.todayMeals}
-                onScheduleMeal={handleScheduleMeal}
+                onScheduleMeal={handleScheduleMeal} 
                 onCancelMeal={handleCancelMeal}
-              />
+              /> */}
               {eatWithStudents && (
                 <div className="absolute top-2 right-2">
                   <Badge className="bg-blue-100 text-blue-800 text-xs">

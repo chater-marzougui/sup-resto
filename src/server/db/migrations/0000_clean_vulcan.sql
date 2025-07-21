@@ -1,5 +1,5 @@
 CREATE TYPE "public"."meal_time" AS ENUM('lunch', 'dinner');--> statement-breakpoint
-CREATE TYPE "public"."schedule_status" AS ENUM('scheduled', 'refunded', 'cancelled', 'redeemed', 'expired');--> statement-breakpoint
+CREATE TYPE "public"."schedule_status" AS ENUM('not_created', 'scheduled', 'refunded', 'cancelled', 'redeemed', 'expired');--> statement-breakpoint
 CREATE TYPE "public"."transaction_type" AS ENUM('balance_recharge', 'meal_schedule', 'refund', 'meal_redemption', 'balance_adjustment');--> statement-breakpoint
 CREATE TYPE "public"."role" AS ENUM('admin', 'payment_staff', 'verification_staff', 'student', 'teacher', 'normal_user');--> statement-breakpoint
 CREATE TABLE "meal_schedules" (
@@ -33,7 +33,7 @@ CREATE TABLE "transactions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
 	"type" "transaction_type" NOT NULL,
-	"amount" numeric(10, 2) NOT NULL,
+	"amount" integer NOT NULL,
 	"processed_by" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );

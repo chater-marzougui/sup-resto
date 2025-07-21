@@ -3,17 +3,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TransactionTypeBadge } from '@/components/elements/transaction-type-badge';
-
-interface Transaction {
-  id: string;
-  type: 'balance_recharge' | 'meal_schedule' | 'refund' | 'meal_redemption' | 'balance_adjustment';
-  amount: string;
-  createdAt: string;
-  processedBy?: string;
-}
+import { BaseTransaction } from '@/server/trpc/validators/transactions-validator';
+import { formatCurrency } from '@/lib/utils/main-utils';
 
 interface RecentTransactionsProps {
-  transactions: Transaction[];
+  transactions: BaseTransaction[];
   isLoading?: boolean;
   limit?: number;
 }
@@ -90,7 +84,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
                 }`}>
                   {transaction.type === 'balance_recharge' || transaction.type === 'refund' 
                     ? '+' : '-'}
-                  {transaction.amount} TND
+                  {formatCurrency(transaction.amount)}
                 </span>
               </div>
             </div>

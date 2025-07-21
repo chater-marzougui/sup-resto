@@ -78,7 +78,7 @@ export const transactions = pgTable('transactions', {
   id: text('id').$defaultFn(() => createId()).primaryKey(),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   type: transactionTypeEnum('type').notNull(),
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(), // Changed to decimal for financial accuracy
+  amount: integer('amount').notNull(), // Changed to integer for numerical accuracy
   processedBy: text('processed_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ([

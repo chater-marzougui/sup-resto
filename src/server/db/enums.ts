@@ -22,7 +22,7 @@ export const userRoleEnum = pgEnum(
 
 export const mealTypeEnum = pgEnum('meal_time', ['lunch', 'dinner']);
 export const transactionTypeEnum = pgEnum('transaction_type', ['balance_recharge' ,'meal_schedule', 'refund', 'meal_redemption', 'balance_adjustment']);
-export const scheduleStatusEnum = pgEnum('schedule_status', ['scheduled', 'refunded', 'cancelled', 'redeemed', 'expired']);
+export const scheduleStatusEnum = pgEnum('schedule_status', ['not_created', 'scheduled', 'refunded', 'cancelled', 'redeemed', 'expired']);
 
 export type TransactionType = typeof transactionTypeEnum.enumValues[number];
 export type MealType = typeof mealTypeEnum.enumValues[number];

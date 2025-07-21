@@ -11,19 +11,19 @@ import {
 } from "../validators/meal-validator";
 import { StatusHistoryEntry } from "@/server/db/schema";
 import { MealCosts, maxMealsInRed, mealTimeEnum } from "@/config/global-config";
-import { transactionTypeEnum } from "@/server/db/enums";
+import { transactionTypeEnum, ScheduleStatusType, MealType } from "@/server/db/enums";
 
 // Types
 export type MealScheduleWithUser = {
   id: string;
   userId: string;
-  mealTime: string;
+  mealTime: MealType;
   scheduledDate: Date;
-  status: string;
+  status: ScheduleStatusType;
   statusHistory: StatusHistoryEntry[] | null;
   createdAt: Date;
   updatedAt: Date;
-  user: {
+  user?: {
     id: string;
     cin: string;
     firstName: string;
@@ -57,23 +57,20 @@ export class MealService {
     const { userId, mealTime, scheduledDate } = input;
     
     // Check if user exists and has sufficient balance
-    const user = await db.select({
-      id: users.id,
-      balance: users.balance,
-      isActive: users.isActive,
-      role: users.role,
-    }).from(users).where(eq(users.id, userId)).limit(1);
-    
-    if (!user.length || !user[0].isActive) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+
+    if (!user || !user.isActive) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'User not found or inactive',
       });
     }
 
-    const MEAL_COST = MealCosts[user[0].role] || 200; // Default cost if role not found
-    const MaxMealsInRed = maxMealsInRed[user[0].role] || 3; // Default max meals if role not found
-    if (user[0].balance < MEAL_COST - MaxMealsInRed * MEAL_COST) {
+    const MEAL_COST = MealCosts[user.role] || 200; // Default cost if role not found
+    const MaxMealsInRed = maxMealsInRed[user.role] || 3; // Default max meals if role not found
+    if (user.balance < MEAL_COST - MaxMealsInRed * MEAL_COST) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Insufficient balance',
@@ -90,40 +87,53 @@ export class MealService {
       ))
       .limit(1);
     
-    if (existingMeal.length) {
+    if (existingMeal.length && existingMeal[0].status === 'scheduled') {
       throw new TRPCError({
         code: 'CONFLICT',
         message: 'Meal already scheduled for this time and date',
       });
     }
-    
-    // Create status history entry
-    const statusHistory: StatusHistoryEntry[] = [{
-      status: 'scheduled',
-      timestamp: new Date().toISOString(),
-    }];
 
-    const scheduledDateTime = 
-            new Date(new Date(scheduledDate)
-            .setHours(...mealTimeEnum[mealTime === 'lunch' ? 0 : 1]));
+    let Meal;
 
-    // Schedule the meal
-    const newMeal = await db.insert(mealSchedules).values({
-      userId,
-      mealTime,
-      scheduledDate: scheduledDateTime,
-      status: 'scheduled',
-      statusHistory,
-    }).returning();
-    
-    if (!newMeal.length) {
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to schedule meal',
+    if (existingMeal.length && existingMeal[0].status !== 'not_created') {
+      this.updateMealStatus({
+        mealId: existingMeal[0].id,
+        status: 'scheduled',
       });
+      Meal =  existingMeal[0];
+    } else {
+      // Create status history entry
+      const statusHistory: StatusHistoryEntry[] = [{
+        status: 'scheduled',
+        timestamp: new Date().toISOString(),
+      }];
+
+      const scheduledDateTime = 
+              new Date(new Date(scheduledDate)
+              .setHours(...mealTimeEnum[mealTime === 'lunch' ? 0 : 1]));
+
+      // Schedule the meal
+      const newMeal = await db.insert(mealSchedules).values({
+        userId,
+        mealTime,
+        scheduledDate: scheduledDateTime,
+        status: 'scheduled',
+        statusHistory,
+      }).returning();
+      
+      if (!newMeal.length) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to schedule meal',
+        });
+      }
+
+      Meal = newMeal[0];
     }
     
     // Deduct balance
+    console.log(`Deducting ${MEAL_COST} from user balance`, userId);
     await db.update(users)
       .set({ balance: sql`${users.balance} - ${MEAL_COST}` })
       .where(eq(users.id, userId));
@@ -131,15 +141,15 @@ export class MealService {
     // Record transaction
     await db.insert(transactions).values({
       userId,
-      type: transactionTypeEnum.enumValues[0],
-      amount: MEAL_COST.toString(),
+      type: transactionTypeEnum.enumValues[1],
+      amount: MEAL_COST,
       processedBy: userId,
     });
     
     // Return meal with user info
-    return await this.getMealById(newMeal[0].id);
+    return await this.getMealById(Meal.id);
   }
-  
+
   /**
    * Schedule multiple meals
    */
@@ -219,8 +229,8 @@ export class MealService {
       
       db.insert(transactions).values({
         userId,
-        type: transactionTypeEnum.enumValues[0],
-        amount: totalCost.toString(),
+        type: transactionTypeEnum.enumValues[1],
+        amount: totalCost,
         processedBy: userId,
       })
     ]);
@@ -262,25 +272,10 @@ export class MealService {
         message: 'Cannot cancel a served meal',
       });
     }
-    
-    // Update status history
-    meal[0].statusHistory?.push(
-      {
-        status: 'cancelled',
-        timestamp: new Date().toISOString(),
-      }
-    );
 
-    // Update meal status
-    await db.update(mealSchedules)
-      .set({ 
-        status: 'cancelled',
-        statusHistory: meal[0].statusHistory,
-        updatedAt: new Date()
-      })
-      .where(eq(mealSchedules.id, mealId));
+    let status: 'cancelled' | 'refunded' = 'cancelled';
 
-    if (meal[0].scheduledDate < new Date(new Date().getTime() + 3 * 60 * 60 * 1000)) {
+    if (meal[0].scheduledDate > new Date(new Date().getTime() - 3 * 60 * 60 * 1000)) {
         const userRole = await db.select({ role: users.role })
         .from(users)
         .where(eq(users.id, userId))
@@ -294,12 +289,31 @@ export class MealService {
         
         db.insert(transactions).values({
             userId,
-            type: transactionTypeEnum.enumValues[1], // Assuming 1 is refund type
-            amount: MEAL_COST.toString(),
+            type: transactionTypeEnum.enumValues[2], // Assuming 2 is refund type
+            amount: MEAL_COST,
             processedBy: userId,
         })
         ]);
+
+        status = 'refunded';
     }
+
+    // Update status history
+    meal[0].statusHistory?.push(
+      {
+        status: status,
+        timestamp: new Date().toISOString(),
+      }
+    );
+
+    // Update meal status
+    await db.update(mealSchedules)
+      .set({ 
+        status: status,
+        statusHistory: meal[0].statusHistory,
+        updatedAt: new Date()
+      })
+      .where(eq(mealSchedules.id, mealId));
     
     return await this.getMealById(mealId);
   }
@@ -463,16 +477,20 @@ export class MealService {
 }
   
   /**
-   * Get today's meals
+   * Get day's meals
    */
-  static async getTodayMeals(): Promise<MealScheduleWithUser[]> {
+  static async getDayMeals(input: { userId: string, isToday?: boolean }): Promise<MealScheduleWithUser[]> {
     const today = new Date();
+    if (input.isToday !== undefined && !input.isToday) {
+      today.setDate(today.getDate() + 1); // Move to tomorrow
+    }
     today.setHours(1, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
     return await db.query.mealSchedules.findMany({
       where: and(
+        eq(mealSchedules.userId, input.userId),
         gte(mealSchedules.scheduledDate, today),
         lte(mealSchedules.scheduledDate, tomorrow)
       ),
@@ -494,7 +512,7 @@ export class MealService {
   /**
    * Get week's meals
    */
-  static async getWeekMeals(): Promise<MealScheduleWithUser[]> {
+  static async getWeekMeals(input: { userId?: string | undefined }): Promise<MealScheduleWithUser[]> {
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
@@ -502,11 +520,17 @@ export class MealService {
     
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+    const whereClause = [];
+    if (input.userId && input.userId.trim() !== "") {
+      whereClause.push(eq(mealSchedules.userId, input.userId));
+    }
     
     return await db.query.mealSchedules.findMany({
       where: and(
+        ...whereClause,
         gte(mealSchedules.scheduledDate, startOfWeek),
-        lte(mealSchedules.scheduledDate, endOfWeek)
+        lte(mealSchedules.scheduledDate, endOfWeek),
       ),
       with: {
         user: {

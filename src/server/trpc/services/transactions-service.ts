@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 import { eq, and, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
 import { db } from "@/server/db";
 import { mealSchedules, transactions, users } from "@/server/db/schema";
-import { transactionTypeEnum } from "@/server/db/enums";
 import type {
   CreateTransactionInput,
   BulkScheduleInput,
@@ -69,7 +68,7 @@ export class TransactionService {
           .values({
             userId: input.userId,
             type: input.type,
-            amount: input.amount.toString(),
+            amount: input.amount,
             processedBy: input.processedBy,
             createdAt: new Date(),
           })
@@ -222,6 +221,14 @@ export class TransactionService {
     }
 
     const userTransactions = await db.query.transactions.findMany({
+        columns: {
+          id: true,
+          userId: true,
+          type: true,
+          amount: true,
+          createdAt: true,
+          processedBy: true,
+        },
         where: and(...conditions),
         with: {
           processedByUser: {
@@ -288,32 +295,6 @@ export class TransactionService {
       input.sortBy === 'type' ? transactions.type :
       transactions.createdAt;
 
-    // Get paginated transactions
-    // const transactionsList = await db
-    //   .select({
-    //     id: transactions.id,
-    //     userId: transactions.userId,
-    //     type: transactions.type,
-    //     amount: transactions.amount,
-    //     createdAt: transactions.createdAt,
-    //     processedBy: transactions.processedBy,
-    //     user: {
-    //       firstName: users.firstName,
-    //       lastName: users.lastName,
-    //       cin: users.cin,
-    //     },
-    //     processedByUser: {
-    //       firstName: sql<string>`processor.first_name`,
-    //       lastName: sql<string>`processor.last_name`,
-    //     },
-    //   })
-    //   .from(transactions)
-    //   .leftJoin(users, eq(transactions.userId, users.id))
-    //   .leftJoin(users.as('processor'), eq(transactions.processedBy, sql`processor.id`))
-    //   .where(conditions.length > 0 ? and(...conditions) : undefined)
-    //   .orderBy(sortOrder(sortColumn))
-    //   .limit(input.limit)
-    //   .offset((input.page - 1) * input.limit);
     const transactionsList = await db.query.transactions.findMany({
       where: and(...conditions),
       with: {
