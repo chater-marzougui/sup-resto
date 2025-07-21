@@ -1,11 +1,9 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { scheduleStatusEnum } from '@/server/db/enums';
-
-type MealStatus = typeof scheduleStatusEnum.enumValues[number];
+import { ScheduleStatusType } from '@/server/db/enums';
 
 interface MealStatusBadgeProps {
-  status: MealStatus;
+  status: ScheduleStatusType;
 }
 
 const statusConfig = {

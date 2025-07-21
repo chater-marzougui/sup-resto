@@ -1,4 +1,4 @@
-import { RoleEnum, transactionTypeEnum } from "@/server/db/enums";
+import { RoleEnum, TransactionType } from "@/server/db/enums";
 
 export function getRoleNameByNumber(key: number) {
     const values = Object.values(RoleEnum).filter((value) => typeof value === 'string');
@@ -18,7 +18,7 @@ export const getRoleColor = (role: number): string => {
   return colors[role] || "bg-gray-100 text-gray-800";
 };
 
-export const getTransactionColor = (type: typeof transactionTypeEnum.enumValues[number]): string => {
+export const getTransactionColor = (type: TransactionType): string => {
   const colors: Record<string, string> = {
     'balance_recharge': 'text-blue-600',
     'meal_schedule': 'text-green-600',

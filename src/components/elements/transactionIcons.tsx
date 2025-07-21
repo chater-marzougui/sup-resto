@@ -1,8 +1,8 @@
 import { CreditCard, DollarSign, Settings, CheckCircle, AlertCircle, Calendar1Icon } from 'lucide-react';
-import { transactionTypeEnum } from '@/server/db/enums';
+import { TransactionType } from '@/server/db/enums';
 
 export const getTransactionIcon = (
-    type: typeof transactionTypeEnum.enumValues[number],
+    type: TransactionType,
     size: number = 24,
     color: string = 'currentColor'
 ) => {

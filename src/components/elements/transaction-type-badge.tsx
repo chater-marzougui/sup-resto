@@ -2,9 +2,8 @@
 // src/components/ui/transaction-type-badge.tsx
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { transactionTypeEnum } from '@/server/db/enums';
+import { TransactionType } from '@/server/db/enums';
 
-type TransactionType = typeof transactionTypeEnum.enumValues[number];
 
 interface TransactionTypeBadgeProps {
   type: TransactionType;

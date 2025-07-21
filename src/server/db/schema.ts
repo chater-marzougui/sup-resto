@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, integer, boolean, pgEnum, decimal, index, unique, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
-import { mealTypeEnum, scheduleStatusEnum, transactionTypeEnum, userRoleEnum } from './enums';
+import { mealTypeEnum, scheduleStatusEnum, ScheduleStatusType, transactionTypeEnum } from './enums';
 
 /*
 import { pgEnum } from "drizzle-orm/pg-core";
@@ -33,7 +33,7 @@ export const scheduleStatusEnum = pgEnum('schedule_status', ['scheduled', 'refun
 
 // Type definitions for JSON fields
 export type StatusHistoryEntry = {
-  status: typeof scheduleStatusEnum.enumValues[number];
+  status: ScheduleStatusType;
   timestamp: string;
 };
 
