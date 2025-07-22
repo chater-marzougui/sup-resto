@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "pull_front",
+      "group": "build",
+      "command": "git pull \u0026\u0026 npm run admin",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "showReuseMessage": true,
+        "echo": true,
+        "clear": false
+      },
+      "type": "shell"
+    },
+    {
+      "label": "back",
+      "command": "npm",
+      "type": "shell",
+      "args": ["run", "backend"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "showReuseMessage": true,
+        "echo": true,
+        "clear": false
+      },
+      "group": "build"
+    },
+    {
+      "label": "reset_studio",
+      "group": "build",
+      "command": "npm run db:reset:seed && npm run db:studio",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": false,
+        "showReuseMessage": true,
+        "echo": true,
+        "clear": false
+      },
+      "type": "shell"
+    }
+  ]
+}
