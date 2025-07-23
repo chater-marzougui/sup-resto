@@ -42,11 +42,11 @@ export const DayMealsCard: React.FC<DayMealsCardProps> = ({
 }) => {
 
   const title = isToday ? "Today's Meals" : "Tomorrow's Meals";
-  const formattedMeals = formatMeals(meals, isToday, userId);
+  const formattedMeals = formatMeals(meals, isToday ? 0 : 1, userId);
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="flex-2">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Clock className="h-5 w-5" />

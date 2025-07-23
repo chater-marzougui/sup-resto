@@ -4,6 +4,7 @@ import { Navbar } from '@/components/elements/navBar';
 
 import './globals.css';
 import { Inter } from 'next/font/google';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,14 +21,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <TRPCProvider>
-          <AuthProvider>
-            <div className="min-h-screen bg-gray-50">
-              <Navbar />
-              {children}
-            </div>
-          </AuthProvider>
-        </TRPCProvider>
+        <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+          <TRPCProvider>
+            <AuthProvider>
+              <div className="min-h-screen bg-gray-50">
+                <Navbar />
+                {children}
+              </div>
+            </AuthProvider>
+          </TRPCProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -4,7 +4,13 @@ import {
   TransactionType,
 } from "@/server/db/enums";
 import { MealScheduleWithUser } from "@/server/trpc/services/meal-service";
-import { MealCosts, mealTimeEnum } from "@/config/global-config";
+import { mealTimeEnum } from "@/config/global-config";
+
+export type dayMealData = {
+  day: string,
+  lunch: MealScheduleWithUser,
+  dinner: MealScheduleWithUser
+}
 
 export function getRoleNameByNumber(key: number) {
   const values = Object.values(RoleEnum).filter(
@@ -71,13 +77,12 @@ export const existingMeals = (meals: MealScheduleWithUser[]): boolean[] => {
   return [lunchExists, dinnerExists];
 };
 
-export const formatMeals = (meals: MealScheduleWithUser[], isToday: boolean, userId: string): MealScheduleWithUser[] => {
+export const formatMeals = (meals: MealScheduleWithUser[], offset: number = 0, userId: string): MealScheduleWithUser[] => {
   const lunchExists = meals.some((meal) => meal.mealTime === "lunch");
   const dinnerExists = meals.some((meal) => meal.mealTime === "dinner");
   const now = new Date();
-  if(!isToday) {
-    now.setDate(now.getDate() + 1); // Move to tomorrow
-  }
+  now.setDate(now.getDate() + offset);
+
   if (!lunchExists) {
     const lunchTime = new Date(now);
     lunchTime.setHours(...mealTimeEnum[0]); // Set
@@ -92,6 +97,7 @@ export const formatMeals = (meals: MealScheduleWithUser[], isToday: boolean, use
       statusHistory: []
     });
   }
+
   if (!dinnerExists) {
     const dinnerTime = new Date(now);
     dinnerTime.setHours(...mealTimeEnum[1]); // Set
@@ -107,6 +113,39 @@ export const formatMeals = (meals: MealScheduleWithUser[], isToday: boolean, use
     });
   }
   return meals;
+};
+
+export const formatWeeklyMeals = (
+  meals: MealScheduleWithUser[],
+): { weeklyMeals: dayMealData[], startOfWeek: Date } => {
+
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const startOfWeek = new Date();
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const weeklyMeals:dayMealData[] = [];
+
+  for (let i = 0; i < 7; i++) {
+    const currentDay = new Date(startOfWeek);
+    currentDay.setDate(startOfWeek.getDate() + i);
+
+    const dayMeals = meals.filter((meal) => {
+      const mealDate = new Date(meal.scheduledDate);
+      return mealDate.getDate() === currentDay.getDate() &&
+             mealDate.getMonth() === currentDay.getMonth() &&
+            mealDate.getFullYear() === currentDay.getFullYear();
+    });
+    const res = formatMeals(dayMeals, i, meals[0]?.userId || "")
+    weeklyMeals.push({
+      day: daysOfWeek[i],
+      lunch: res[0],
+      dinner: res[1]
+    });
+
+  }
+
+  return { weeklyMeals, startOfWeek };
 };
 
 const mealEligibilityForMeal = (

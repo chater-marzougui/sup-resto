@@ -25,7 +25,7 @@ const QRCodeGenerator: React.FC<QRCodeGeneratorProps> = ({
         size={size}
         fgColor={fgColor}
         bgColor={bgColor}
-        marginSize={includeMargin ? 4 : 0}
+        marginSize={includeMargin ? 1 : 0}
       />
     </div>
   );

@@ -10,7 +10,7 @@ interface DashboardLayoutProps {
 // Base Dashboard Layout Component
 export function DashboardLayout({ children, title, subtitle, actions }: DashboardLayoutProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-background">
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>

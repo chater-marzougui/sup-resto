@@ -6,9 +6,6 @@ import {
   Calendar,
   Clock,
   QrCode,
-  Plus,
-  Settings,
-  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withDashboardLayout } from "./withDashboardLayout";
@@ -26,18 +23,14 @@ import LoadingSpinner from "../elements/LoadingSpinner";
 import { formatCurrency } from "@/lib/utils/main-utils";
 import { trpc } from "@/lib/trpc";
 import { mealTimeEnum } from "@/config/global-config";
+import { toast } from "sonner";
 
 interface StudentDashboardProps {}
 
 const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
-  // TODO: Replace with actual tRPC calls
-  // const { data: userProfile } = api.users.getProfile.useQuery();
-  // const { data: userBalance } = api.users.getBalance.useQuery();
-  // const { data: monthlyStats } = api.analytics.getMonthlyStats.useQuery();
-  // const scheduleMeal = api.mealSchedules.schedule.useMutation();
-  // const cancelMeal = api.mealSchedules.cancel.useMutation();
   const { user, transactions, isLoadingUser, isLoadingTransactions } =
     useProfile();
+
   const todayMeals = trpc.meal.getDayMeals.useQuery({
     userId: user?.id,
     isToday: true,
@@ -46,14 +39,14 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
     userId: user?.id,
     isToday: false,
   });
-  const weeklyMeals = trpc.meal.getWeekMeals.useQuery(
-    { userId: user?.id },
-  );
+  const weeklyMeals = trpc.meal.getWeekMeals.useQuery({ userId: user?.id });
   const cancelMeal = trpc.meal.cancelMeal.useMutation();
   const scheduleMeal = trpc.meal.scheduleMeal.useMutation();
   const monthlyStats = trpc.analytics.getMonthlySpending.useQuery({
     userId: user?.id,
   });
+
+  const utils = trpc.useUtils();
 
   if (isLoadingUser || isLoadingTransactions) {
     return <LoadingSpinner />;
@@ -65,40 +58,42 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
 
   const mealPrice = MealCosts[user.role];
 
-  // Mock data - replace with actual data from tRPC
-  const mockData = {
-    weeklyMeals: [
-      {
-        id: "w1",
-        date: "2024-01-15",
-        mealTime: "lunch" as const,
-        status: "scheduled" as const,
-      },
-    ],
-    scheduledMealsThisWeek: 3,
-  };
-
-  const handleScheduleMeal = async (mealTime: MealType, scheduledDate: Date) => {
+  const handleScheduleMeal = async (
+    mealTime: MealType,
+    scheduledDate: Date
+  ) => {
     if (!user?.id) return;
     if (mealTime == "lunch") {
-      scheduledDate.setHours(...mealTimeEnum[0]); 
+      scheduledDate.setHours(...mealTimeEnum[0]);
     } else {
-      scheduledDate.setHours(...mealTimeEnum[1]); 
+      scheduledDate.setHours(...mealTimeEnum[1]);
     }
 
-    await scheduleMeal.mutateAsync({
-      userId: user.id,
-      mealTime: mealTime,
-      scheduledDate: scheduledDate,
-    });
-    console.log("Scheduling meal:", mealTime);
+    try {
+      await scheduleMeal.mutateAsync({
+        userId: user.id,
+        mealTime: mealTime,
+        scheduledDate: scheduledDate,
+      });
+      utils.invalidate();
+      toast.success("Meal scheduled successfully");
+    } catch (error) {
+      console.error("Error scheduling meal:", error);
+    }
   };
 
   const handleCancelMeal = async (mealId: string) => {
-    const result = await cancelMeal.mutateAsync({
-      userId: user.id,
-      mealId: mealId,
-    });
+    try {
+      await cancelMeal.mutateAsync({
+        userId: user.id,
+        mealId: mealId,
+      });
+      utils.invalidate();
+      toast.success("Meal cancelled successfully");
+    } catch (error) {
+      console.error("Error cancelling meal:", error);
+    }
+
   };
 
   return (
@@ -116,10 +111,7 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
     >
       <div className="space-y-6">
         {/* Low Balance Alert */}
-        <LowBalanceAlert
-          currentBalance={user?.balance}
-          mealPrice={mealPrice}
-        />
+        <LowBalanceAlert currentBalance={user?.balance} mealPrice={mealPrice} />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -141,18 +133,12 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
 
           <StatCard
             title="Monthly Spending"
-            value={`${formatCurrency(monthlyStats.data?.monthlySpending[0]?.month ?? 0)}`}
+            value={`${formatCurrency(
+              monthlyStats.data?.monthlySpending[0]?.month ?? 0
+            )}`}
             icon={Clock}
             iconColor="text-yellow-500"
             description="January 2024"
-          />
-
-          <StatCard
-            title="QR Ready"
-            value="Active"
-            icon={QrCode}
-            iconColor="text-purple-500"
-            description="Scan to enter"
           />
         </div>
 
@@ -183,7 +169,7 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
 
           {/* Right Column - Weekly Calendar */}
           <div className="lg:col-span-2">
-            <WeeklyMealCalendar meals={mockData.weeklyMeals} />
+            <WeeklyMealCalendar meals={weeklyMeals.data || []} />
           </div>
         </div>
 

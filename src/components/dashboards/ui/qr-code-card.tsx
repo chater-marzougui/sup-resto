@@ -13,33 +13,27 @@ interface QRCodeCardProps {
 
 export const QRCodeCard: React.FC<QRCodeCardProps> = ({ cin, userName }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => setIsOpen(false);
 
   return (
-    <Card>
+    <Card className="min-w-[280px] max-w-[420px] flex-1 gap-3">
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <QrCode className="h-5 w-5" />
           <span>QR Code</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="text-center space-y-4">
-          <div className="flex justify-center">
+      <CardContent >
+        <div className="text-center">
+          <div className="flex justify-center cursor-pointer" onClick={handleOpen}>
             <QRCodeGenerator 
               value={cin} 
-              size={120}
+              size={130}
               includeMargin={true}
             />
           </div>
-          <p className="text-sm text-gray-600">
-            Show this QR code at the canteen entrance
-          </p>
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full">
-                View Full Size
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>QR Code - {userName}</DialogTitle>
@@ -47,14 +41,11 @@ export const QRCodeCard: React.FC<QRCodeCardProps> = ({ cin, userName }) => {
               <div className="flex flex-col items-center space-y-4 p-4">
                 <QRCodeGenerator 
                   value={cin} 
-                  size={250}
+                  size={320}
                   includeMargin={true}
                 />
                 <p className="text-sm text-gray-600 text-center">
                   CIN: {cin}
-                </p>
-                <p className="text-xs text-gray-500 text-center">
-                  Present this code to the canteen staff for meal access
                 </p>
               </div>
             </DialogContent>

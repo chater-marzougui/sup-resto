@@ -515,34 +515,25 @@ export class MealService {
   static async getWeekMeals(input: { userId?: string | undefined }): Promise<MealScheduleWithUser[]> {
     const today = new Date();
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Set to Monday
+    console.log("Start of week:", startOfWeek);
     startOfWeek.setHours(1, 0, 0, 0);
     
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
+    endOfWeek.setDate(startOfWeek.getDate() + 5); // Set to Saturday
+    endOfWeek.setHours(23, 0, 0, 0);
 
     const whereClause = [];
     if (input.userId && input.userId.trim() !== "") {
       whereClause.push(eq(mealSchedules.userId, input.userId));
     }
-    
+
     return await db.query.mealSchedules.findMany({
       where: and(
         ...whereClause,
         gte(mealSchedules.scheduledDate, startOfWeek),
         lte(mealSchedules.scheduledDate, endOfWeek),
       ),
-      with: {
-        user: {
-          columns: {
-            id: true,
-            cin: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
       orderBy: [asc(mealSchedules.scheduledDate), asc(mealSchedules.mealTime)],
     });
   }

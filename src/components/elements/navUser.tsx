@@ -1,6 +1,6 @@
 "use client";
 
-import { Languages, Link, LoaderCircle } from "lucide-react";
+import { Languages, LoaderCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     DropdownMenu,
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ExitIcon, MoonIcon, PersonIcon, SunIcon } from "@radix-ui/react-icons";
 import i18n from "i18next";
 import { useAuth } from "../auth/use-auth";
-import { UseTheme } from "../providers/theme-provider";
+import { useTheme } from "../providers/theme-provider";
 
 const countryOptions = [
     {
@@ -51,7 +51,7 @@ const countryOptions = [
 export function NavUser() {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const { theme, setTheme } = UseTheme();
+    const { theme, setTheme } = useTheme();
     const { user: data } = useAuth();
 
     const handleLogout = (e: any) => {
@@ -119,11 +119,11 @@ export function NavUser() {
                             <DropdownMenuGroup>
                                 <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                                     <div className="flex w-full justify-between">
-                                        <span>Dark Mode</span>
+                                        <span>Toggle Dark Mode</span>
                                         {theme === "light" ? (
                                             <MoonIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 dark:-rotate-90 dark:scale-0" />
                                         ) : (
-                                            <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 dark:rotate-0 dark:scale-100" />
+                                            <SunIcon className="h-[1.2rem] w-[1.2rem] rotate-90 scale-0 dark:rotate-0 dark:scale-100" />
                                         )}
                                     </div>
                                 </DropdownMenuItem>

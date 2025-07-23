@@ -1,43 +1,247 @@
-
 // src/components/dashboard/weekly-meal-calendar.tsx
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MealStatusBadge } from '@/components/elements/meal-status-badge';
-import { trpc } from '@/lib/trpc';
-
-interface MealSchedule {
-  id: string;
-  date: string;
-  mealTime: 'lunch' | 'dinner';
-  status: 'scheduled' | 'cancelled' | 'redeemed' | 'expired' | 'refunded';
-}
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { formatWeeklyMeals } from "@/lib/utils/main-utils";
+import { MealScheduleWithUser } from "@/server/trpc/services/meal-service";
+import { ScheduleStatusType } from "@/server/db/enums";
+import {
+  Calendar,
+  Clock,
+  CheckCircle2,
+  CheckCheck,
+  XCircle,
+  RefreshCw,
+  AlertCircle,
+  Flame,
+  Plus,
+  Utensils,
+  Moon,
+} from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { dayMealData } from "@/lib/utils/main-utils";
 
 interface WeeklyMealCalendarProps {
-  meals: MealSchedule[];
+  meals: MealScheduleWithUser[];
   isLoading?: boolean;
+  onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void;
 }
 
-export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({ 
-  meals, 
-  isLoading = false 
-}) => {
-    // TODO: Get weekly meals from tRPC
-  const { data: weeklyMeals } = trpc.meal.getWeekMeals.useQuery();
+const mealStatusIcon = (status: ScheduleStatusType): React.JSX.Element => {
+  const iconProps = { className: "w-4 h-4" };
+  
+  switch (status) {
+    case "not_created":
+      return <AlertCircle {...iconProps} className="w-4 h-4 text-red-400" />;
+    case "expired":
+      return <Flame {...iconProps} className="w-4 h-4 text-destructive" />;
+    case "scheduled":
+      return <CheckCircle2 {...iconProps} className="w-4 h-4 text-green-600 dark:text-green-500" />;
+    case "redeemed":
+      return <CheckCheck {...iconProps} className="w-4 h-4 text-green-700 dark:text-green-400" />;
+    case "cancelled":
+      return <XCircle {...iconProps} className="w-4 h-4 text-destructive" />;
+    case "refunded":
+      return <RefreshCw {...iconProps} className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+    default:
+      return <AlertCircle {...iconProps} className="w-4 h-4 text-muted-foreground" color="red" />;
+  }
+};
 
-  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const mealTimes = ['lunch', 'dinner'] as const;
+const getStatusColor = (status: ScheduleStatusType): string => {
+  switch (status) {
+    case "not_created":
+      return "border-muted-foreground/20 bg-muted/10";
+    case "expired":
+      return "border-destructive/20 bg-destructive/5";
+    case "scheduled":
+      return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20";
+    case "redeemed":
+      return "border-green-300 bg-green-100 dark:border-green-700 dark:bg-green-900/30";
+    case "cancelled":
+      return "border-destructive/20 bg-destructive/5";
+    case "refunded":
+      return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20";
+    default:
+      return "border-muted-foreground/20 bg-muted/10";
+  }
+};
+
+const DayElement = ({ data, isMobile }: { data?: dayMealData; isMobile: boolean }): React.JSX.Element => {
+  if (!data) return <div className="flex-1" />;
+
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="font-medium text-sm text-foreground mb-3 text-center">
+        {data.day}
+      </div>
+
+      <div className="space-y-2">
+        {/* Lunch */}
+        <div className={`p-2 border rounded-lg text-xs transition-colors ${getStatusColor(data.lunch?.status ?? "not_created")}`}>
+          <div className="flex items-center justify-center mb-1">
+            {mealStatusIcon(data.lunch?.status ?? "not_created")}
+          </div>
+        </div>
+
+        {/* Dinner */}
+        <div className={`p-2 border rounded-lg text-xs transition-colors ${getStatusColor(data.dinner?.status ?? "not_created")}`}>
+          <div className="flex items-center justify-center mb-1">
+            {mealStatusIcon(data.dinner?.status ?? "not_created")}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ScheduleMealDialog = ({ onScheduleMeals }: { onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void }) => {
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const mealTypes = [
+    { id: "lunch", label: "Lunch", icon: Utensils },
+    { id: "dinner", label: "Dinner", icon: Moon }
+  ];
+
+  const handleDayToggle = (day: string) => {
+    setSelectedDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
+
+  const handleMealTypeToggle = (mealType: string) => {
+    setSelectedMealTypes(prev => 
+      prev.includes(mealType) 
+        ? prev.filter(m => m !== mealType)
+        : [...prev, mealType]
+    );
+  };
+
+  const handleSubmit = () => {
+    if (selectedDays.length > 0 && selectedMealTypes.length > 0) {
+      onScheduleMeals?.(selectedDays, selectedMealTypes);
+      setSelectedDays([]);
+      setSelectedMealTypes([]);
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="ml-auto">
+          <Plus className="w-4 h-4 mr-2" />
+          Schedule Meals
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Schedule Meals
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Days Selection */}
+          <div>
+            <h4 className="font-medium mb-3">Select Days</h4>
+            <div className="grid grid-cols-4 gap-2">
+              {daysOfWeek.map((day) => (
+                <div key={day} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={day}
+                    checked={selectedDays.includes(day)}
+                    onCheckedChange={() => handleDayToggle(day)}
+                  />
+                  <label
+                    htmlFor={day}
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    {day}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Meal Types Selection */}
+          <div>
+            <h4 className="font-medium mb-3">Select Meal Types</h4>
+            <div className="space-y-2">
+              {mealTypes.map((mealType) => (
+                <div key={mealType.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={mealType.id}
+                    checked={selectedMealTypes.includes(mealType.id)}
+                    onCheckedChange={() => handleMealTypeToggle(mealType.id)}
+                  />
+                  <label
+                    htmlFor={mealType.id}
+                    className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                  >
+                    <mealType.icon className="w-4 h-4" />
+                    {mealType.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="flex-1"
+              onClick={handleSubmit}
+              disabled={selectedDays.length === 0 || selectedMealTypes.length === 0}
+            >
+              Schedule Selected
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
+  meals,
+  isLoading = false,
+  onScheduleMeals,
+}) => {
+  const isMobile = useIsMobile();
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Weekly Meal Schedule</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Weekly Meal Schedule
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse">
-            <div className="grid grid-cols-7 gap-2">
-              {Array.from({ length: 14 }).map((_, i) => (
-                <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            <div className="flex gap-2">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted rounded w-8 mx-auto"></div>
+                  <div className="h-12 bg-muted rounded"></div>
+                  <div className="h-12 bg-muted rounded"></div>
+                </div>
               ))}
             </div>
           </div>
@@ -46,43 +250,55 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
     );
   }
 
-  const getMealForDay = (day: string, mealTime: 'lunch' | 'dinner') => {
-    return meals.find(meal => 
-      meal.date.includes(day) && meal.mealTime === mealTime
-    );
-  };
+  const { weeklyMeals } = formatWeeklyMeals(meals);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Weekly Meal Schedule</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Weekly Meal Schedule
+          </CardTitle>
+          <ScheduleMealDialog onScheduleMeals={onScheduleMeals} />
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-7 gap-2 text-center">
-          {daysOfWeek.map(day => (
-            <div key={day} className="font-medium text-sm text-gray-600 mb-2">
-              {day}
-            </div>
+        <div className="flex gap-2 text-center overflow-x-auto pb-2">
+          {weeklyMeals.map((dayData, index) => (
+            <DayElement key={dayData.day || index} data={dayData} isMobile={isMobile} />
           ))}
-          
-          {daysOfWeek.map(day => (
-            <div key={`${day}-meals`} className="space-y-2">
-              {mealTimes.map(mealTime => {
-                const meal = getMealForDay(day, mealTime);
-                return (
-                  <div key={`${day}-${mealTime}`} 
-                       className="p-2 border rounded text-xs">
-                    <div className="font-medium capitalize">{mealTime}</div>
-                    {meal ? (
-                      <MealStatusBadge status={meal.status} />
-                    ) : (
-                      <span className="text-gray-400">Available</span>
-                    )}
-                  </div>
-                );
-              })}
+        </div>
+        
+        {/* Legend */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="text-xs text-muted-foreground mb-2">Status Legend:</div>
+          <div className="flex flex-wrap gap-3 text-xs">
+            <div className="flex items-center gap-1">
+              <AlertCircle className="w-3 h-3 text-muted-foreground" color="red" />
+              <span>Available</span>
             </div>
-          ))}
+            <div className="flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-green-600" />
+              <span>Scheduled</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCheck className="w-3 h-3 text-green-700" />
+              <span>Redeemed</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <XCircle className="w-3 h-3 text-destructive" />
+              <span>Cancelled</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 text-blue-600" />
+              <span>Refunded</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Flame className="w-3 h-3 text-destructive" />
+              <span>Expired</span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
