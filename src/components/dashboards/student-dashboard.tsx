@@ -1,12 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  CreditCard,
-  Calendar,
-  Clock,
-  QrCode,
-} from "lucide-react";
+import { CreditCard, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withDashboardLayout } from "./withDashboardLayout";
 import { DashboardLayout } from "../layouts/dashboardLayout";
@@ -93,7 +88,6 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
     } catch (error) {
       console.error("Error cancelling meal:", error);
     }
-
   };
 
   return (
@@ -117,7 +111,7 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             title="Current Balance"
-            value={`${formatCurrency(user?.balance)}`}
+            value={`${formatCurrency(user?.balance > 0 ? user?.balance : 0)}`}
             icon={CreditCard}
             iconColor="text-blue-500"
             description={`≈ ${Math.floor(user?.balance / mealPrice)} meals`}

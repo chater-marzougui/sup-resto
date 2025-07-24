@@ -7,7 +7,6 @@ import {
   Calendar,
   Clock,
   QrCode,
-  Plus,
   Settings,
   History,
   Users,
@@ -26,105 +25,91 @@ import { QRCodeCard } from "./ui/qr-code-card";
 import { LowBalanceAlert } from "./ui/low-balance-alert";
 import { useProfile } from "@/hooks/use-profile";
 import LoadingSpinner from "../elements/LoadingSpinner";
+import { MealCosts } from "@/config/global-config";
+import { trpc } from "@/lib/trpc";
+import { mealTimeEnum } from "@/config/global-config";
+import { toast } from "sonner";
+import { MealType } from "@/server/db/enums";
+import { formatCurrency } from "@/lib/utils/main-utils";
 
 interface TeacherDashboardProps {}
 
 const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
-  // TODO: Replace with actual tRPC calls
-  // const { data: userProfile } = api.users.getProfile.useQuery();
-  // const { data: userBalance } = api.users.getBalance.useQuery();
-  // const { data: monthlyStats } = api.analytics.getMonthlyStats.useQuery();
-  // const scheduleMeal = api.mealSchedules.schedule.useMutation();
-  // const cancelMeal = api.mealSchedules.cancel.useMutation();
-  const { user, isLoadingUser, isLoadingTransactions } = useProfile();
+  const { user, transactions, isLoadingUser, isLoadingTransactions } =
+    useProfile();
+  const [eatWithStudents, setEatWithStudents] = React.useState(false);
+  const currentMealPrice = eatWithStudents
+    ? MealCosts[RoleEnum.student]
+    : MealCosts[RoleEnum.teacher];
+
+  const todayMeals = trpc.meal.getDayMeals.useQuery({
+    userId: user?.id,
+    isToday: true,
+  });
+  const tomorrowMeals = trpc.meal.getDayMeals.useQuery({
+    userId: user?.id,
+    isToday: false,
+  });
+  const weeklyMeals = trpc.meal.getWeekMeals.useQuery({ userId: user?.id });
+  const cancelMeal = trpc.meal.cancelMeal.useMutation();
+  const scheduleMeal = trpc.meal.scheduleMeal.useMutation();
+  const monthlyStats = trpc.analytics.getMonthlySpending.useQuery({
+    userId: user?.id,
+  });
+
+  const utils = trpc.useUtils();
+
   if (isLoadingUser || isLoadingTransactions) {
     return <LoadingSpinner />;
   }
 
-  // Mock data - replace with actual data from tRPC
-  const mockData = {
-    user: {
-      cin: "87654321",
-      firstName: "Prof. Sarah",
-      lastName: "Mahmoud",
-      balance: 25.4, // TND
-    },
-    todayMeals: [
-      {
-        mealTime: "lunch" as const,
-        canSchedule: true,
-        canCancel: false,
-      },
-      {
-        id: "meal-456",
-        mealTime: "dinner" as const,
-        status: "scheduled" as const,
-        canSchedule: false,
-        canCancel: true,
-      },
-    ],
-    weeklyMeals: [
-      {
-        id: "w2",
-        date: "2024-01-15",
-        mealTime: "lunch" as const,
-        status: "scheduled" as const,
-      },
-    ],
-    recentTransactions: [
-      {
-        id: "t3",
-        type: "balance_recharge" as const,
-        amount: "30.00",
-        createdAt: "2024-01-15T10:00:00Z",
-      },
-      {
-        id: "t4",
-        type: "meal_schedule" as const,
-        amount: "2.00",
-        createdAt: "2024-01-15T12:00:00Z",
-      },
-    ],
-    monthlySpending: 45.2,
-    scheduledMealsThisWeek: 4,
-    teacherMealPrice: 2.0, // 2000 millimes = 2.00 TND
-    studentMealPrice: 0.2, // When eating with students
-    hasStudentPricing: false, // Toggle for eating with students
+  if (!user || !transactions) {
+    return <div>Error loading user data</div>;
+  }
+
+  const handleScheduleMeal = async (
+    mealTime: MealType,
+    scheduledDate: Date
+  ) => {
+    if (!user?.id) return;
+    if (mealTime == "lunch") {
+      scheduledDate.setHours(...mealTimeEnum[0]);
+    } else {
+      scheduledDate.setHours(...mealTimeEnum[1]);
+    }
+
+    try {
+      await scheduleMeal.mutateAsync({
+        userId: user.id,
+        mealTime: mealTime,
+        scheduledDate: scheduledDate,
+      });
+      utils.invalidate();
+      toast.success("Meal scheduled successfully");
+    } catch (error) {
+      console.error("Error scheduling meal:", error);
+    }
   };
 
-  const [eatWithStudents, setEatWithStudents] = React.useState(
-    mockData.hasStudentPricing
-  );
-  const currentMealPrice = eatWithStudents
-    ? mockData.studentMealPrice
-    : mockData.teacherMealPrice;
-
-  const handleScheduleMeal = (mealTime: "lunch" | "dinner") => {
-    // TODO: Implement meal scheduling with pricing option
-    // scheduleMeal.mutate({ mealTime, date: new Date().toISOString(), useStudentPricing: eatWithStudents });
-    console.log(
-      "Scheduling meal:",
-      mealTime,
-      "with student pricing:",
-      eatWithStudents
-    );
+  const handleCancelMeal = async (mealId: string) => {
+    try {
+      await cancelMeal.mutateAsync({
+        userId: user.id,
+        mealId: mealId,
+      });
+      utils.invalidate();
+      toast.success("Meal cancelled successfully");
+    } catch (error) {
+      console.error("Error cancelling meal:", error);
+    }
   };
 
-  const handleCancelMeal = (mealId: string) => {
-    // TODO: Implement meal cancellation
-    // cancelMeal.mutate({ mealId });
-    console.log("Cancelling meal:", mealId);
-  };
-
-  const handleRechargeClick = () => {
-    // TODO: Navigate to recharge page or open recharge modal
-    console.log("Redirect to recharge page");
-  };
+  
 
   return (
     <DashboardLayout
       title="Teacher Dashboard"
-      subtitle={`Welcome back, ${mockData.user.firstName}!`}
+      subtitle={`Welcome back, ${user.firstName}!`}
       actions={
         <>
           <Button variant="outline" className="flex items-center space-x-2">
@@ -135,23 +120,14 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
             <Settings className="h-4 w-4" />
             <span>Settings</span>
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Recharge</span>
-          </Button>
-          <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center space-x-2">
-            <Calendar className="h-4 w-4" />
-            <span>Schedule Meals</span>
-          </Button>
         </>
       }
     >
       <div className="space-y-6">
         {/* Low Balance Alert */}
         <LowBalanceAlert
-          currentBalance={mockData.user.balance}
-          mealPrice={currentMealPrice}
-          onRechargeClick={handleRechargeClick}
+          currentBalance={user.balance}
+          mealPrice={MealCosts[user.role]}
         />
 
         {/* Teacher-specific pricing card */}
@@ -171,10 +147,10 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
                 </p>
                 <p className="text-sm text-gray-600">
                   {eatWithStudents
-                    ? `${mockData.studentMealPrice.toFixed(
+                    ? `${MealCosts[RoleEnum.student].toFixed(
                         2
                       )} TND per meal (eating with students)`
-                    : `${mockData.teacherMealPrice.toFixed(
+                    : `${MealCosts[RoleEnum.teacher].toFixed(
                         2
                       )} TND per meal (regular teacher pricing)`}
                 </p>
@@ -207,17 +183,17 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             title="Current Balance"
-            value={`${mockData.user.balance.toFixed(2)} TND`}
+            value={`${formatCurrency(user?.balance)}`}
             icon={CreditCard}
             iconColor="text-blue-500"
             description={`≈ ${Math.floor(
-              mockData.user.balance / currentMealPrice
+              user?.balance > 0 ? user?.balance : 0 / currentMealPrice
             )} meals at current rate`}
           />
 
           <StatCard
             title="This Week"
-            value={mockData.scheduledMealsThisWeek}
+            value={`${weeklyMeals.data?.length ?? 0} meals`}
             icon={Calendar}
             iconColor="text-green-500"
             description="Scheduled meals"
@@ -225,7 +201,9 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
 
           <StatCard
             title="Monthly Spending"
-            value={`${mockData.monthlySpending.toFixed(2)} TND`}
+            value={`${formatCurrency(
+              monthlyStats.data?.monthlySpending[0]?.month ?? 0
+            )}`}
             icon={Clock}
             iconColor="text-yellow-500"
             description="January 2024"
@@ -241,17 +219,23 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Today's Meals & QR */}
-          <div className="space-y-6">
-            <div className="relative">
-              {/* <DayMealsCard
-                userId={mockData.user.id}
+        <div className="flex gap-6 items-center justify-between flex-col">
+          <div className="flex flex-wrap items-center gap-6 w-full justify-between">
+              <DayMealsCard
+                userId={user.id}
                 isToday={true}
-                meals={mockData.todayMeals}
-                onScheduleMeal={handleScheduleMeal} 
+                meals={todayMeals.data || []}
+                onScheduleMeal={handleScheduleMeal}
                 onCancelMeal={handleCancelMeal}
-              /> */}
+              />
+              <DayMealsCard
+                userId={user.id}
+                isToday={false}
+                meals={tomorrowMeals.data || []}
+                onScheduleMeal={handleScheduleMeal}
+                onCancelMeal={handleCancelMeal}
+              />
+
               {eatWithStudents && (
                 <div className="absolute top-2 right-2">
                   <Badge className="bg-blue-100 text-blue-800 text-xs">
@@ -259,22 +243,21 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
                   </Badge>
                 </div>
               )}
-            </div>
 
             <QRCodeCard
-              cin={mockData.user.cin}
-              userName={`${mockData.user.firstName} ${mockData.user.lastName}`}
+              cin={user.cin}
+              userName={`${user.firstName} ${user.lastName}`}
             />
           </div>
 
           {/* Right Column - Weekly Calendar */}
           <div className="lg:col-span-2">
-            <WeeklyMealCalendar meals={mockData.weeklyMeals} />
+            <WeeklyMealCalendar meals={weeklyMeals.data || []} />
           </div>
         </div>
 
         {/* Recent Transactions */}
-        <RecentTransactions transactions={mockData.recentTransactions} />
+        <RecentTransactions transactions={transactions} />
       </div>
     </DashboardLayout>
   );

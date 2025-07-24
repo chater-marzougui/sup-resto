@@ -17,7 +17,7 @@ export const QRCodeCard: React.FC<QRCodeCardProps> = ({ cin, userName }) => {
   const handleClose = () => setIsOpen(false);
 
   return (
-    <Card className="min-w-[280px] max-w-[420px] flex-1 gap-3">
+    <Card className="min-w-[280px] max-w-[380px] flex-1 gap-3">
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <QrCode className="h-5 w-5" />
@@ -33,23 +33,25 @@ export const QRCodeCard: React.FC<QRCodeCardProps> = ({ cin, userName }) => {
               includeMargin={true}
             />
           </div>
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>QR Code - {userName}</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col items-center space-y-4 p-4">
-                <QRCodeGenerator 
-                  value={cin} 
-                  size={320}
-                  includeMargin={true}
-                />
-                <p className="text-sm text-gray-600 text-center">
-                  CIN: {cin}
-                </p>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className='w-[80%] mx-auto mt-2'>
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+              <DialogContent className="max-w-md w-[90%]">
+                <DialogHeader>
+                  <DialogTitle>QR Code - {userName}</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center space-y-4 p-4">
+                  <QRCodeGenerator 
+                    value={cin} 
+                    size={280}
+                    includeMargin={true}
+                  />
+                  <p className="text-sm text-gray-600 text-center">
+                    CIN: {cin}
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </CardContent>
     </Card>
