@@ -1,6 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { ScheduleStatusType } from '@/server/db/enums';
+import { AlertCircle, Flame, CheckCircle2, CheckCheck, XCircle, RefreshCw } from 'lucide-react';
 
 interface MealStatusBadgeProps {
   status: ScheduleStatusType;
@@ -22,4 +23,45 @@ export const MealStatusBadge: React.FC<MealStatusBadgeProps> = ({ status }) => {
       {config.label}
     </Badge>
   );
+};
+
+
+export const getMealStatusIcon = (status: ScheduleStatusType): React.JSX.Element => {
+  const iconProps = { className: "w-4 h-4" };
+  
+  switch (status) {
+    case "not_created":
+      return <AlertCircle {...iconProps} className="w-4 h-4 text-red-400" />;
+    case "expired":
+      return <Flame {...iconProps} className="w-4 h-4 text-destructive" />;
+    case "scheduled":
+      return <CheckCircle2 {...iconProps} className="w-4 h-4 text-green-600 dark:text-green-500" />;
+    case "redeemed":
+      return <CheckCheck {...iconProps} className="w-4 h-4 text-green-700 dark:text-green-400" />;
+    case "cancelled":
+      return <XCircle {...iconProps} className="w-4 h-4 text-destructive" />;
+    case "refunded":
+      return <RefreshCw {...iconProps} className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+    default:
+      return <AlertCircle {...iconProps} className="w-4 h-4 text-muted-foreground" color="red" />;
+  }
+};
+
+export const getMealStatusColor = (status: ScheduleStatusType): string => {
+  switch (status) {
+    case "not_created":
+      return "border-muted-foreground/20 bg-muted/10";
+    case "expired":
+      return "border-destructive/20 bg-destructive/5";
+    case "scheduled":
+      return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20";
+    case "redeemed":
+      return "border-green-300 bg-green-100 dark:border-green-700 dark:bg-green-900/30";
+    case "cancelled":
+      return "border-destructive/20 bg-destructive/5";
+    case "refunded":
+      return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20";
+    default:
+      return "border-muted-foreground/20 bg-muted/10";
+  }
 };

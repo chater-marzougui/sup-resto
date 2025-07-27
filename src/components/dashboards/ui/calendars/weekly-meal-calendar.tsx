@@ -1,12 +1,8 @@
 // src/components/dashboard/weekly-meal-calendar.tsx
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { daysOfWeek, formatWeeklyMeals, dayMealData } from "@/lib/utils/meal-utils";
+import { formatWeeklyMeals, dayMealData } from "@/lib/utils/meal-utils";
 import { MealScheduleWithUser } from "@/server/trpc/services/meal-service";
-import { ScheduleStatusType } from "@/server/db/enums";
 import {
   Calendar,
   CheckCircle2,
@@ -15,11 +11,9 @@ import {
   RefreshCw,
   AlertCircle,
   Flame,
-  Plus,
-  Utensils,
-  Moon,
 } from "lucide-react";
 import { ScheduleMealDialog } from "./meal-schedule-dialog";
+import { getMealStatusColor, getMealStatusIcon } from "@/components/elements/meal-status-badge";
 
 interface WeeklyMealCalendarProps {
   meals: MealScheduleWithUser[];
@@ -27,45 +21,6 @@ interface WeeklyMealCalendarProps {
   onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void;
 }
 
-const mealStatusIcon = (status: ScheduleStatusType): React.JSX.Element => {
-  const iconProps = { className: "w-4 h-4" };
-  
-  switch (status) {
-    case "not_created":
-      return <AlertCircle {...iconProps} className="w-4 h-4 text-red-400" />;
-    case "expired":
-      return <Flame {...iconProps} className="w-4 h-4 text-destructive" />;
-    case "scheduled":
-      return <CheckCircle2 {...iconProps} className="w-4 h-4 text-green-600 dark:text-green-500" />;
-    case "redeemed":
-      return <CheckCheck {...iconProps} className="w-4 h-4 text-green-700 dark:text-green-400" />;
-    case "cancelled":
-      return <XCircle {...iconProps} className="w-4 h-4 text-destructive" />;
-    case "refunded":
-      return <RefreshCw {...iconProps} className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
-    default:
-      return <AlertCircle {...iconProps} className="w-4 h-4 text-muted-foreground" color="red" />;
-  }
-};
-
-const getStatusColor = (status: ScheduleStatusType): string => {
-  switch (status) {
-    case "not_created":
-      return "border-muted-foreground/20 bg-muted/10";
-    case "expired":
-      return "border-destructive/20 bg-destructive/5";
-    case "scheduled":
-      return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20";
-    case "redeemed":
-      return "border-green-300 bg-green-100 dark:border-green-700 dark:bg-green-900/30";
-    case "cancelled":
-      return "border-destructive/20 bg-destructive/5";
-    case "refunded":
-      return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20";
-    default:
-      return "border-muted-foreground/20 bg-muted/10";
-  }
-};
 
 const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {
   if (!data) return <div className="flex-1" />;
@@ -78,16 +33,16 @@ const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {
 
       <div className="space-y-2">
         {/* Lunch */}
-        <div className={`p-2 border rounded-lg text-xs transition-colors ${getStatusColor(data.lunch?.status ?? "not_created")}`}>
+        <div className={`p-2 border rounded-lg text-xs transition-colors ${getMealStatusColor(data.lunch?.status ?? "not_created")}`}>
           <div className="flex items-center justify-center mb-1">
-            {mealStatusIcon(data.lunch?.status ?? "not_created")}
+            {getMealStatusIcon(data.lunch?.status ?? "not_created")}
           </div>
         </div>
 
         {/* Dinner */}
-        <div className={`p-2 border rounded-lg text-xs transition-colors ${getStatusColor(data.dinner?.status ?? "not_created")}`}>
+        <div className={`p-2 border rounded-lg text-xs transition-colors ${getMealStatusColor(data.dinner?.status ?? "not_created")}`}>
           <div className="flex items-center justify-center mb-1">
-            {mealStatusIcon(data.dinner?.status ?? "not_created")}
+            {getMealStatusIcon(data.dinner?.status ?? "not_created")}
           </div>
         </div>
       </div>
