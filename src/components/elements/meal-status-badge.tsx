@@ -26,12 +26,30 @@ export const MealStatusBadge: React.FC<MealStatusBadgeProps> = ({ status }) => {
 };
 
 
+export const getMealStatusBadgeVariant = (status: ScheduleStatusType | undefined) => {
+  switch (status) {
+    case "scheduled":
+      return "default";
+    case "redeemed":
+      return "secondary";
+    case "cancelled":
+      return "destructive";
+    case "refunded":
+      return "outline";
+    case "expired":
+      return "destructive";
+    default:
+      return "outline";
+  }
+};
+
+
 export const getMealStatusIcon = (status: ScheduleStatusType): React.JSX.Element => {
   const iconProps = { className: "w-4 h-4" };
   
   switch (status) {
     case "not_created":
-      return <AlertCircle {...iconProps} className="w-4 h-4 text-red-400" />;
+      return <AlertCircle {...iconProps} className="w-4 h-4 text-red-200" />;
     case "expired":
       return <Flame {...iconProps} className="w-4 h-4 text-destructive" />;
     case "scheduled":

@@ -9,7 +9,6 @@ import { TransactionWithProcessedBy } from "@/server/trpc/validators/transaction
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import TransactionLine from './transaction-line';   
-import { ScrollBar } from '@/components/ui/scroll-area';
 
 interface PaginatedTransactionsModalProps {
   userId: string;
@@ -164,7 +163,7 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
                 {/* End of results */}
                 {!hasNextPage && allTransactions.length > 0 && (
                   <p className="text-center text-muted-foreground py-4 text-sm">
-                    No more transactions to load
+                    No more transactions
                   </p>
                 )}
               </div>

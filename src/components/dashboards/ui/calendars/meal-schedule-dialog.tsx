@@ -11,112 +11,116 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Calendar, CheckCircle2, XCircle, Settings } from "lucide-react";
+import { MealType } from "@/server/db/enums";
 import {
-  Plus,
-  Calendar,
-  Utensils,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-} from "lucide-react";
-import {  } from "@/lib/utils/meal-utils";
-import { ScheduleStatusType, MealType } from "@/server/db/enums";
-import {
-  getMealStatusColor,
+  getMealStatusBadgeVariant,
   getMealStatusIcon,
 } from "@/components/elements/meal-status-badge";
-import { canScheduleMeal, canCancelMeal, dayMealData, daysOfWeek } from "@/lib/utils/meal-utils";
-import { MealScheduleWithUser } from "@/server/trpc/services/meal-service";
+import {
+  canScheduleMeal,
+  canCancelMeal,
+  dayMealData,
+  daysOfWeek,
+} from "@/lib/utils/meal-utils";
+
+type ActionType = "schedule" | "cancel";
+type MealSelection = {
+  day: string;
+  mealType: MealType;
+};
+
 interface ScheduleMealDialogProps {
   weeklyMeals: (dayMealData | undefined)[];
   onScheduleMeals?: (
     selectedDays: string[],
     mealTypes: string[],
-    action: "schedule" | "cancel"
+    action: ActionType
   ) => void;
 }
 
-type ActionType = "schedule" | "cancel";
 const weekdayToday = new Date().getDay() === 0 ? 0 : new Date().getDay() - 1;
-
 const DAYS = daysOfWeek.slice(weekdayToday);
-const MEAL_TIMES: MealType[] = ["lunch", "dinner"];
-
-const canTakeAction = (
-  action: (meal: MealScheduleWithUser) => boolean,
-  meal?: MealScheduleWithUser,
-): boolean => {
-  if (!meal) return false;
-  return action(meal);
-};
-
-const getStatusBadgeVariant = (status: ScheduleStatusType | undefined) => {
-  switch (status) {
-    case "scheduled":
-      return "default";
-    case "redeemed":
-      return "secondary";
-    case "cancelled":
-      return "destructive";
-    case "refunded":
-      return "outline";
-    case "expired":
-      return "destructive";
-    default:
-      return "outline";
-  }
-};
 
 const DayMealsSelection: React.FC<{
   day: string;
   dayData?: dayMealData;
-  selectedDays: string[];
-  action: (meal: MealScheduleWithUser) => boolean;
-  onDayToggle: (day: string) => void;
-}> = ({ day, dayData, selectedDays, action, onDayToggle }) => {
-  if (
-    !dayData ||
-    dayData.lunch.scheduledDate < new Date()
-  ) {
-    return <div className="flex-1" />;
+  selectedMeals: MealSelection[];
+  selectedAction: ActionType;
+  onMealToggle: (day: string, mealType: MealType) => void;
+}> = ({ day, dayData, selectedMeals, selectedAction, onMealToggle }) => {
+  // Don't render if no data or day is in the past
+  if (!dayData || dayData.lunch.scheduledDate < new Date()) {
+    return null;
   }
-  const isSelected = selectedDays.includes(day);
-  const canSelectLunch = action(dayData.lunch);
-  const canSelectDinner = action(dayData.dinner);
+
+  const actionCheck =
+    selectedAction === "schedule" ? canScheduleMeal : canCancelMeal;
+  const canSelectLunch = actionCheck(dayData.lunch);
+  const canSelectDinner = actionCheck(dayData.dinner);
+
+  const isLunchSelected = selectedMeals.some(
+    (meal) => meal.day === day && meal.mealType === "lunch"
+  );
+  const isDinnerSelected = selectedMeals.some(
+    (meal) => meal.day === day && meal.mealType === "dinner"
+  );
+
+  const isAlreadyChecked = (mealType: MealType) => {
+    if (selectedAction === "schedule") {
+      return dayData[mealType].status === "scheduled";
+    } else if (selectedAction === "cancel") {
+      const statuses = ["redeemed", "refunded"];
+      return statuses.includes(dayData[mealType].status);
+    }
+    return false;
+  };
 
   return (
-    <div className="flex items-center space-x-3 p-3 border rounded-lg">
-      <div className="flex-1 min-w-0">
-        <label
-          htmlFor={`day-${day}`}
-          className="text-sm font-medium cursor-pointer"
-        >
-          {day}
-        </label>
-        <div className="flex gap-1 mt-1">
-          {(["lunch", "dinner"] as MealType[]).map((mealTime) => {
-            const status = dayData?.[mealTime]?.status;
-            const isSelectable =
-              mealTime === "lunch" ? canSelectLunch : canSelectDinner;
-            return (
-              <>
-                <Checkbox
-                  id={`day-${day}-${mealTime}`}
-                  checked={isSelected}
-                  disabled={!isSelectable}
-                  onCheckedChange={() => onDayToggle(day)}
-                />
-                <Badge
-                  key={mealTime}
-                  variant={getStatusBadgeVariant(status)}
-                  className="text-xs"
-                >
-                  {mealTime.charAt(0).toUpperCase()}: {getMealStatusIcon(status)}
-                </Badge>
-              </>
-            );
-          })}
+    <div className="p-3 border rounded-lg">
+      <div className="text-sm font-medium mb-3 text-center">{day}</div>
+
+      <div className="flex space-x-2">
+        {/* Lunch */}
+        <div className="flex items-center justify-center space-x-2">
+          <Checkbox
+            id={`${day}-lunch`}
+            checked={isLunchSelected || isAlreadyChecked("lunch")}
+            disabled={!canSelectLunch}
+            onCheckedChange={() => onMealToggle(day, "lunch")}
+          />
+          <label
+            htmlFor={`${day}-lunch`}
+            className="flex items-center gap-2 text-xs cursor-pointer flex-1"
+          >
+            <Badge
+              variant={getMealStatusBadgeVariant(dayData.lunch?.status)}
+              className="text-xs"
+            >
+              L: {getMealStatusIcon(dayData.lunch?.status)}
+            </Badge>
+          </label>
+        </div>
+
+        {/* Dinner */}
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id={`${day}-dinner`}
+            checked={isDinnerSelected || isAlreadyChecked("dinner")}
+            disabled={!canSelectDinner}
+            onCheckedChange={() => onMealToggle(day, "dinner")}
+          />
+          <label
+            htmlFor={`${day}-dinner`}
+            className="flex items-center gap-2 text-xs cursor-pointer flex-1"
+          >
+            <Badge
+              variant={getMealStatusBadgeVariant(dayData.dinner?.status)}
+              className="text-xs"
+            >
+              D: {getMealStatusIcon(dayData.dinner?.status)}
+            </Badge>
+          </label>
         </div>
       </div>
     </div>
@@ -128,73 +132,89 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
   onScheduleMeals,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedMealTimes, setSelectedMealTimes] = useState<MealType[]>([]);
+  const [selectedMeals, setSelectedMeals] = useState<MealSelection[]>([]);
   const [selectedAction, setSelectedAction] = useState<ActionType>("schedule");
-  console.log("ScheduleMealDialog", weeklyMeals);
+
+  // Filter out past days and undefined meals
   const weeklyMealsData = weeklyMeals.filter((meal) => {
-    return meal !== undefined &&
-    (meal?.lunch?.scheduledDate >= new Date() ||
-           meal?.dinner?.scheduledDate >= new Date());
+    return (
+      meal !== undefined &&
+      (meal?.lunch?.scheduledDate >= new Date() ||
+        meal?.dinner?.scheduledDate >= new Date())
+    );
   });
 
-  const handleDayToggle = (day: string) => {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+  const handleMealToggle = (day: string, mealType: MealType) => {
+    setSelectedMeals((prev) => {
+      const existingIndex = prev.findIndex(
+        (meal) => meal.day === day && meal.mealType === mealType
+      );
+
+      if (existingIndex >= 0) {
+        // Remove if already selected
+        return prev.filter((_, index) => index !== existingIndex);
+      } else {
+        // Add new selection
+        return [...prev, { day, mealType }];
+      }
+    });
   };
 
-  const handleMealTimeToggle = (mealTime: MealType) => {
-    setSelectedMealTimes((prev) =>
-      prev.includes(mealTime)
-        ? prev.filter((mt) => mt !== mealTime)
-        : [...prev, mealTime]
-    );
-  };
+  const handleSelectAllAvailable = () => {
+    const actionCheck =
+      selectedAction === "schedule" ? canScheduleMeal : canCancelMeal;
+    const availableMeals: MealSelection[] = [];
 
-  const handleSelectAllDays = () => {
-    const availableDays = DAYS.filter((day) => {
+    DAYS.forEach((day) => {
       const dayData = weeklyMealsData.find((meal) => meal?.day === day);
-      if (!dayData) return true;
-      const action = selectedAction === "schedule" ? canScheduleMeal : canCancelMeal;
-
-      // Check if any meal time can take the selected action
-      return selectedMealTimes.some((mealTime) => {
-        return canTakeAction(action, dayData[mealTime]);
-      });
+      if (dayData) {
+        if (actionCheck(dayData.lunch)) {
+          availableMeals.push({ day, mealType: "lunch" });
+        }
+        if (actionCheck(dayData.dinner)) {
+          availableMeals.push({ day, mealType: "dinner" });
+        }
+      }
     });
 
-    setSelectedDays(availableDays);
-  };
-
-  const handleSelectAllMealTimes = () => {
-    setSelectedMealTimes([...MEAL_TIMES]);
+    setSelectedMeals(availableMeals);
   };
 
   const clearSelections = () => {
-    setSelectedDays([]);
-    setSelectedMealTimes([]);
+    setSelectedMeals([]);
   };
 
   const handleSubmit = () => {
-    if (selectedDays.length === 0 || selectedMealTimes.length === 0) return;
+    if (selectedMeals.length === 0) return;
 
-    onScheduleMeals?.(selectedDays, selectedMealTimes, selectedAction);
+    // Group selections by day and meal type for the callback
+    const selectedDays = [...new Set(selectedMeals.map((meal) => meal.day))];
+    const selectedMealTypes = [
+      ...new Set(selectedMeals.map((meal) => meal.mealType)),
+    ];
+
+    onScheduleMeals?.(selectedDays, selectedMealTypes, selectedAction);
     setIsOpen(false);
     clearSelections();
   };
 
-  const hasSelections = selectedDays.length > 0 && selectedMealTimes.length > 0;
+  const handleActionChange = (action: ActionType) => {
+    setSelectedAction(action);
+    // Clear selections when action changes since availability might change
+    setSelectedMeals([]);
+  };
+
+  const hasSelections = selectedMeals.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Plus className="w-4 h-4 mr-2" />
-          Schedule Meals
+          <Settings className="w-4 h-4 mr-2" />
+          Manage Meals
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto custom-scrollbar">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
@@ -210,20 +230,20 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
               <Button
                 variant={selectedAction === "schedule" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedAction("schedule")}
+                onClick={() => handleActionChange("schedule")}
                 className="flex items-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                Schedule
+                Schedule Meals
               </Button>
               <Button
                 variant={selectedAction === "cancel" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedAction("cancel")}
+                onClick={() => handleActionChange("cancel")}
                 className="flex items-center gap-2"
               >
                 <XCircle className="w-4 h-4" />
-                Cancel
+                Cancel Meals
               </Button>
             </div>
           </div>
@@ -233,98 +253,46 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
           {/* Day Selection */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium">Days</h3>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={handleSelectAllDays}>
-                  Select Available
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedDays([])}
-                >
-                  Clear
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {DAYS.map((day) => {
-                return (
-                  <DayMealsSelection
-                    key={day}
-                    day={day}
-                    dayData={weeklyMealsData.find((meal) => meal?.day === day)}
-                    selectedDays={selectedDays}
-                    action={canCancelMeal}
-                    onDayToggle={handleDayToggle}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Meal Time Selection */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium">Meal Times</h3>
+              <h3 className="text-sm font-medium">Select Meals</h3>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleSelectAllMealTimes}
+                  onClick={handleSelectAllAvailable}
                 >
-                  Select All
+                  Select All Available
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedMealTimes([])}
-                >
-                  Clear
+                <Button variant="ghost" size="sm" onClick={clearSelections}>
+                  Clear All
                 </Button>
               </div>
             </div>
-            <div className="flex gap-3">
-              {MEAL_TIMES.map((mealTime) => (
-                <div
-                  key={mealTime}
-                  className="flex items-center space-x-3 p-3 border rounded-lg flex-1"
-                >
-                  <Checkbox
-                    id={`meal-${mealTime}`}
-                    checked={selectedMealTimes.includes(mealTime)}
-                    onCheckedChange={() => handleMealTimeToggle(mealTime)}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Utensils className="w-4 h-4" />
-                    <label
-                      htmlFor={`meal-${mealTime}`}
-                      className="text-sm font-medium cursor-pointer capitalize"
-                    >
-                      {mealTime}
-                    </label>
-                  </div>
-                </div>
+
+            <div className="flex flex-wrap gap-3">
+              {DAYS.map((day) => (
+                <DayMealsSelection
+                  key={day}
+                  day={day}
+                  dayData={weeklyMealsData.find((meal) => meal?.day === day)}
+                  selectedMeals={selectedMeals}
+                  selectedAction={selectedAction}
+                  onMealToggle={handleMealToggle}
+                />
               ))}
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4">
-          <Button
-            onClick={handleSubmit}
-            disabled={!hasSelections}
-            className="flex-1"
-          >
+        <div className="flex gap-3 pt-4 justify-end">
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            Close
+          </Button>
+          <Button onClick={handleSubmit} disabled={!hasSelections}>
             {selectedAction === "schedule"
               ? "Schedule Selected Meals"
               : "Cancel Selected Meals"}
-          </Button>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
-            Close
+            {hasSelections && ` (${selectedMeals.length})`}
           </Button>
         </div>
       </DialogContent>

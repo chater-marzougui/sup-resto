@@ -1,26 +1,21 @@
 // src/components/dashboard/weekly-meal-calendar.tsx
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatWeeklyMeals, dayMealData } from "@/lib/utils/meal-utils";
 import { MealScheduleWithUser } from "@/server/trpc/services/meal-service";
-import {
-  Calendar,
-  CheckCircle2,
-  CheckCheck,
-  XCircle,
-  RefreshCw,
-  AlertCircle,
-  Flame,
-} from "lucide-react";
+import { Calendar } from "lucide-react";
 import { ScheduleMealDialog } from "./meal-schedule-dialog";
-import { getMealStatusColor, getMealStatusIcon } from "@/components/elements/meal-status-badge";
+import {
+  getMealStatusColor,
+  getMealStatusIcon,
+} from "@/components/elements/meal-status-badge";
+import { scheduleStatusEnum } from "@/server/db/enums";
 
 interface WeeklyMealCalendarProps {
   meals: MealScheduleWithUser[];
   isLoading?: boolean;
   onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void;
 }
-
 
 const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {
   if (!data) return <div className="flex-1" />;
@@ -33,14 +28,22 @@ const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {
 
       <div className="space-y-2">
         {/* Lunch */}
-        <div className={`p-2 border rounded-lg text-xs transition-colors ${getMealStatusColor(data.lunch?.status ?? "not_created")}`}>
+        <div
+          className={`p-2 border rounded-lg text-xs transition-colors ${getMealStatusColor(
+            data.lunch?.status ?? "not_created"
+          )}`}
+        >
           <div className="flex items-center justify-center mb-1">
             {getMealStatusIcon(data.lunch?.status ?? "not_created")}
           </div>
         </div>
 
         {/* Dinner */}
-        <div className={`p-2 border rounded-lg text-xs transition-colors ${getMealStatusColor(data.dinner?.status ?? "not_created")}`}>
+        <div
+          className={`p-2 border rounded-lg text-xs transition-colors ${getMealStatusColor(
+            data.dinner?.status ?? "not_created"
+          )}`}
+        >
           <div className="flex items-center justify-center mb-1">
             {getMealStatusIcon(data.dinner?.status ?? "not_created")}
           </div>
@@ -55,7 +58,6 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
   isLoading = false,
   onScheduleMeals,
 }) => {
-
   if (isLoading) {
     return (
       <Card>
@@ -90,9 +92,12 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Weekly Meal Schedule
+            Week's Schedule
           </CardTitle>
-          <ScheduleMealDialog weeklyMeals={weeklyMeals} onScheduleMeals={onScheduleMeals} />
+          <ScheduleMealDialog
+            weeklyMeals={weeklyMeals}
+            onScheduleMeals={onScheduleMeals}
+          />
         </div>
       </CardHeader>
       <CardContent>
@@ -101,35 +106,22 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
             <DayElement key={dayData.day || index} data={dayData} />
           ))}
         </div>
-        
+
         {/* Legend */}
         <div className="mt-4 pt-4 border-t border-border">
-          <div className="text-xs text-muted-foreground mb-2">Status Legend:</div>
-          <div className="flex flex-wrap gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <AlertCircle className="w-3 h-3 text-muted-foreground" color="red" />
-              <span>Available</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-green-600" />
-              <span>Scheduled</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCheck className="w-3 h-3 text-green-700" />
-              <span>Redeemed</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <XCircle className="w-3 h-3 text-destructive" />
-              <span>Cancelled</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 text-blue-600" />
-              <span>Refunded</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Flame className="w-3 h-3 text-destructive" />
-              <span>Expired</span>
-            </div>
+          <div className="text-xs text-muted-foreground mb-2">
+            Status Legend:
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs items-center">
+            {scheduleStatusEnum.enumValues.map((status) => (
+              <div key={status} className="flex items-center gap-2 mb-1">
+                {getMealStatusIcon(status)}
+                <span className="text-sm">
+                  {status.charAt(0).toUpperCase() +
+                    status.slice(1).replace(/_/g, " ")}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
