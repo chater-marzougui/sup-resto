@@ -34,8 +34,6 @@ export default function DashboardPage() {
     );
   }
 
-  console.log('User role:', user.role);
-
   switch (user.role) {
     case RoleEnum.student:
       return <StudentDashboard />;

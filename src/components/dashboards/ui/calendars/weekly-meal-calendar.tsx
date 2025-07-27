@@ -19,6 +19,7 @@ import {
   Utensils,
   Moon,
 } from "lucide-react";
+import { ScheduleMealDialog } from "./meal-schedule-dialog";
 
 interface WeeklyMealCalendarProps {
   meals: MealScheduleWithUser[];
@@ -91,125 +92,6 @@ const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {
         </div>
       </div>
     </div>
-  );
-};
-
-const ScheduleMealDialog = ({ weeklyMeals, onScheduleMeals }: { weeklyMeals: dayMealData[]; onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void }) => {
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-
-  const mealTypes = [
-    { id: "lunch", label: "Lunch", icon: Utensils },
-    { id: "dinner", label: "Dinner", icon: Moon }
-  ];
-
-  const handleDayToggle = (day: string) => {
-    setSelectedDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day)
-        : [...prev, day]
-    );
-  };
-
-  const handleMealTypeToggle = (mealType: string) => {
-    setSelectedMealTypes(prev => 
-      prev.includes(mealType) 
-        ? prev.filter(m => m !== mealType)
-        : [...prev, mealType]
-    );
-  };
-
-  const handleSubmit = () => {
-    if (selectedDays.length > 0 && selectedMealTypes.length > 0) {
-      onScheduleMeals?.(selectedDays, selectedMealTypes);
-      setSelectedDays([]);
-      setSelectedMealTypes([]);
-      setIsOpen(false);
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto cursor-pointer">
-          <Plus className="w-4 h-4 mr-2" />
-          Schedule Meals
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Schedule Meals
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6">
-          {/* Days Selection */}
-          <div>
-            <h4 className="font-medium mb-3">Select Days</h4>
-            <div className="grid grid-cols-4 gap-2">
-              {daysOfWeek.map((day) => (
-                <div key={day} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={day}
-                    checked={selectedDays.includes(day)}
-                    onCheckedChange={() => handleDayToggle(day)}
-                  />
-                  <label
-                    htmlFor={day}
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    {day}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Meal Types Selection */}
-          <div>
-            <h4 className="font-medium mb-3">Select Meal Types</h4>
-            <div className="space-y-2">
-              {mealTypes.map((mealType) => (
-                <div key={mealType.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={mealType.id}
-                    checked={selectedMealTypes.includes(mealType.id)}
-                    onCheckedChange={() => handleMealTypeToggle(mealType.id)}
-                  />
-                  <label
-                    htmlFor={mealType.id}
-                    className="text-sm font-medium cursor-pointer flex items-center gap-2"
-                  >
-                    <mealType.icon className="w-4 h-4" />
-                    {mealType.label}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={() => setIsOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              className="flex-1"
-              onClick={handleSubmit}
-              disabled={selectedDays.length === 0 || selectedMealTypes.length === 0}
-            >
-              Schedule Selected
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 };
 

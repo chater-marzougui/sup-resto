@@ -7,7 +7,7 @@ import { withDashboardLayout } from "./withDashboardLayout";
 import { DashboardLayout } from "../layouts/dashboardLayout";
 import { MealType, RoleEnum } from "@/server/db/enums";
 import { StatCard } from "@/components/elements/stat-card";
-import { WeeklyMealCalendar } from "./ui/weekly-meal-calendar";
+import { WeeklyMealCalendar } from "./ui/calendars/weekly-meal-calendar";
 import { RecentTransactions } from "./ui/recent-transactions/recent-transactions";
 import { DayMealsCard } from "./ui/day-meals-card";
 import { QRCodeCard } from "./ui/qr-code-card";
@@ -105,7 +105,7 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
       <div className="space-y-6">
         {/* Low Balance Alert */}
         <LowBalanceAlert currentBalance={user?.balance} mealPrice={mealPrice} />
-        
+
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
@@ -165,9 +165,8 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
             <WeeklyMealCalendar meals={weeklyMeals.data || []} />
           </div>
         </div>
-        
-        <RecentTransactions userId={user?.id} />
 
+        <RecentTransactions userId={user?.id} />
       </div>
     </DashboardLayout>
   );

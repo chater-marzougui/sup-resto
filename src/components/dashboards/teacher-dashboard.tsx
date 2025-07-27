@@ -18,7 +18,7 @@ import { withDashboardLayout } from "./withDashboardLayout";
 import { DashboardLayout } from "../layouts/dashboardLayout";
 import { RoleEnum } from "@/server/db/enums";
 import { StatCard } from "@/components/elements/stat-card";
-import { WeeklyMealCalendar } from "./ui/weekly-meal-calendar";
+import { WeeklyMealCalendar } from "./ui/calendars/weekly-meal-calendar";
 import { RecentTransactions } from "./ui/recent-transactions/recent-transactions";
 import { DayMealsCard } from "./ui/day-meals-card";
 import { QRCodeCard } from "./ui/qr-code-card";
@@ -35,8 +35,7 @@ import { formatCurrency } from "@/lib/utils/main-utils";
 interface TeacherDashboardProps {}
 
 const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
-  const { user, transactions, isLoadingUser, isLoadingTransactions } =
-    useProfile();
+  const { user, isLoadingUser } = useProfile();
   const [eatWithStudents, setEatWithStudents] = React.useState(false);
   const currentMealPrice = eatWithStudents
     ? MealCosts[RoleEnum.student]
@@ -59,11 +58,11 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
 
   const utils = trpc.useUtils();
 
-  if (isLoadingUser || isLoadingTransactions) {
+  if (isLoadingUser) {
     return <LoadingSpinner />;
   }
 
-  if (!user || !transactions) {
+  if (!user) {
     return <div>Error loading user data</div>;
   }
 
@@ -103,8 +102,6 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
       console.error("Error cancelling meal:", error);
     }
   };
-
-  
 
   return (
     <DashboardLayout
@@ -221,28 +218,28 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
         {/* Main Content Grid */}
         <div className="flex gap-6 items-center justify-between flex-col">
           <div className="flex flex-wrap items-center gap-6 w-full justify-between">
-              <DayMealsCard
-                userId={user.id}
-                isToday={true}
-                meals={todayMeals.data || []}
-                onScheduleMeal={handleScheduleMeal}
-                onCancelMeal={handleCancelMeal}
-              />
-              <DayMealsCard
-                userId={user.id}
-                isToday={false}
-                meals={tomorrowMeals.data || []}
-                onScheduleMeal={handleScheduleMeal}
-                onCancelMeal={handleCancelMeal}
-              />
+            <DayMealsCard
+              userId={user.id}
+              isToday={true}
+              meals={todayMeals.data || []}
+              onScheduleMeal={handleScheduleMeal}
+              onCancelMeal={handleCancelMeal}
+            />
+            <DayMealsCard
+              userId={user.id}
+              isToday={false}
+              meals={tomorrowMeals.data || []}
+              onScheduleMeal={handleScheduleMeal}
+              onCancelMeal={handleCancelMeal}
+            />
 
-              {eatWithStudents && (
-                <div className="absolute top-2 right-2">
-                  <Badge className="bg-blue-100 text-blue-800 text-xs">
-                    Student Rate
-                  </Badge>
-                </div>
-              )}
+            {eatWithStudents && (
+              <div className="absolute top-2 right-2">
+                <Badge className="bg-blue-100 text-blue-800 text-xs">
+                  Student Rate
+                </Badge>
+              </div>
+            )}
 
             <QRCodeCard
               cin={user.cin}
@@ -257,7 +254,7 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
         </div>
 
         {/* Recent Transactions */}
-        <RecentTransactions transactions={transactions} />
+        <RecentTransactions userId={user?.id} />
       </div>
     </DashboardLayout>
   );

@@ -124,7 +124,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
         <CardContent>
           <div className="space-y-4">
             {transactions.slice(0, limit).map((transaction) => (
-              <TransactionLine transaction={transaction} />
+              <TransactionLine transaction={transaction} key={transaction.id} />
             ))}
           </div>
         </CardContent>
