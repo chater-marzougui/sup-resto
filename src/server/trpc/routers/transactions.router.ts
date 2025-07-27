@@ -7,15 +7,16 @@ import {
   bulkScheduleValidator,
   refundTransactionValidator,
   balanceAdjustmentValidator,
-  paginatedTransactionsValidator,
-  userBalanceValidator,
   transactionStatsValidator,
   bulkBalanceUpdateValidator,
   transactionIdValidator,
   userTransactionHistoryValidator,
   baseTransactionValidator,
+  cursorTransactionsValidator,
+  getAllTransactionsValidator,
+  transactionWithProcessedByValidator
 } from "../validators/transactions-validator";
-import { RoleEnum, transactionTypeEnum } from "@/server/db/enums";
+import { RoleEnum } from "@/server/db/enums";
 
 export const transactionRouter = createTRPCRouter({
   /**
@@ -214,7 +215,7 @@ export const transactionRouter = createTRPCRouter({
    */
   getUserTransactionHistory: protectedProcedure
     .input(userTransactionHistoryValidator)
-    .output(z.array(baseTransactionValidator))
+    .output(z.array(transactionWithProcessedByValidator))
     .query(async ({ ctx, input }) => {
       try {
         // Users can view their own history, staff can view any history
@@ -224,42 +225,8 @@ export const transactionRouter = createTRPCRouter({
             message: 'Cannot access other users\' transaction history',
           });
         }
-
+        console.log("Fetching transaction history for user:", input);
         return await TransactionService.getUserTransactionHistory(input);
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch transaction history',
-          cause: error,
-        });
-      }
-    }),
-
-  /**
-   * Get current user's transaction history (simplified)
-   */
-  getMyTransactionHistory: protectedProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(100).default(20),
-      offset: z.number().min(0).default(0),
-      type: z.enum(Object.values(transactionTypeEnum)).optional(),
-    }))
-    .query(async ({ ctx, input }) => {
-      try {
-        if (!ctx.user?.id) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'User not authenticated',
-          });
-        }
-
-        return await TransactionService.getUserTransactionHistory({
-          ...input,
-          userId: ctx.user.id,
-        });
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
@@ -276,15 +243,17 @@ export const transactionRouter = createTRPCRouter({
    * Get all transactions with filters and pagination (staff only)
    */
   getAllTransactions: protectedProcedure
-    .input(paginatedTransactionsValidator)
+    .input(cursorTransactionsValidator)
+    .output(getAllTransactionsValidator)
     .query(async ({ ctx, input }) => {
       // Check if user is staff
-      if (ctx.user?.role && ctx.user.role > 2) {
+      if (ctx.user?.role && ctx.user.role > 2 && ctx.user.id !== input.userId) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Only staff members can view all transactions',
         });
       }
+      console.log("Fetching all transactions with filters:", input);
 
       try {
         return await TransactionService.getAllTransactions(input);
@@ -439,38 +408,6 @@ export const transactionRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch today\'s transaction summary',
-          cause: error,
-        });
-      }
-    }),
-
-  /**
-   * Get recent transactions (staff dashboard)
-   */
-  getRecentTransactions: protectedProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(50).default(10),
-    }))
-    .query(async ({ ctx, input }) => {
-      // Check if user is staff
-      if (ctx.user?.role && ctx.user.role > 2) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only staff members can view recent transactions',
-        });
-      }
-
-      try {
-        return await TransactionService.getAllTransactions({
-          page: 1,
-          limit: input.limit,
-          sortBy: 'createdAt',
-          sortOrder: 'desc',
-        });
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch recent transactions',
           cause: error,
         });
       }

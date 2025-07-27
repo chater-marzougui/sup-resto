@@ -19,7 +19,7 @@ import { DashboardLayout } from "../layouts/dashboardLayout";
 import { RoleEnum } from "@/server/db/enums";
 import { StatCard } from "@/components/elements/stat-card";
 import { WeeklyMealCalendar } from "./ui/weekly-meal-calendar";
-import { RecentTransactions } from "./ui/recent-transactions";
+import { RecentTransactions } from "./ui/recent-transactions/recent-transactions";
 import { DayMealsCard } from "./ui/day-meals-card";
 import { QRCodeCard } from "./ui/qr-code-card";
 import { LowBalanceAlert } from "./ui/low-balance-alert";

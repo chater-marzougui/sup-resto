@@ -43,9 +43,6 @@ export function Navbar() {
             ) : (
               <WifiOff className="h-4 w-4 text-red-500" />
             )}
-            <span className="text-sm text-gray-500">
-              {isOnline ? "Online" : "Offline Mode"}
-            </span>
           </div>
 
           {/* Navigation Links */}
@@ -137,11 +134,8 @@ export function Navbar() {
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
-                <span className="text-sm text-gray-700">
-                  Hello, {user?.firstName} {user?.lastName}
-                </span>
                 <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                  {getRoleNameByNumber(user?.role ?? RoleEnum.normalUser)}
+                  {getRoleNameByNumber(user?.role ?? RoleEnum.normalUser)}  
                 </span>
                 <Bell className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
                 <NavUser />

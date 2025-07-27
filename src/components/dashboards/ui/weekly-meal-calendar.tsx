@@ -4,12 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatWeeklyMeals } from "@/lib/utils/main-utils";
+import { daysOfWeek, formatWeeklyMeals, dayMealData } from "@/lib/utils/meal-utils";
 import { MealScheduleWithUser } from "@/server/trpc/services/meal-service";
 import { ScheduleStatusType } from "@/server/db/enums";
 import {
   Calendar,
-  Clock,
   CheckCircle2,
   CheckCheck,
   XCircle,
@@ -20,8 +19,6 @@ import {
   Utensils,
   Moon,
 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { dayMealData } from "@/lib/utils/main-utils";
 
 interface WeeklyMealCalendarProps {
   meals: MealScheduleWithUser[];
@@ -69,7 +66,7 @@ const getStatusColor = (status: ScheduleStatusType): string => {
   }
 };
 
-const DayElement = ({ data, isMobile }: { data?: dayMealData; isMobile: boolean }): React.JSX.Element => {
+const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {
   if (!data) return <div className="flex-1" />;
 
   return (
@@ -97,12 +94,11 @@ const DayElement = ({ data, isMobile }: { data?: dayMealData; isMobile: boolean 
   );
 };
 
-const ScheduleMealDialog = ({ onScheduleMeals }: { onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void }) => {
+const ScheduleMealDialog = ({ weeklyMeals, onScheduleMeals }: { weeklyMeals: dayMealData[]; onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void }) => {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedMealTypes, setSelectedMealTypes] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const mealTypes = [
     { id: "lunch", label: "Lunch", icon: Utensils },
     { id: "dinner", label: "Dinner", icon: Moon }
@@ -136,7 +132,7 @@ const ScheduleMealDialog = ({ onScheduleMeals }: { onScheduleMeals?: (selectedDa
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto">
+        <Button variant="outline" size="sm" className="ml-auto cursor-pointer">
           <Plus className="w-4 h-4 mr-2" />
           Schedule Meals
         </Button>
@@ -222,7 +218,6 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
   isLoading = false,
   onScheduleMeals,
 }) => {
-  const isMobile = useIsMobile();
 
   if (isLoading) {
     return (
@@ -260,13 +255,13 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
             <Calendar className="w-5 h-5" />
             Weekly Meal Schedule
           </CardTitle>
-          <ScheduleMealDialog onScheduleMeals={onScheduleMeals} />
+          <ScheduleMealDialog weeklyMeals={weeklyMeals} onScheduleMeals={onScheduleMeals} />
         </div>
       </CardHeader>
       <CardContent>
         <div className="flex gap-2 text-center overflow-x-auto pb-2">
           {weeklyMeals.map((dayData, index) => (
-            <DayElement key={dayData.day || index} data={dayData} isMobile={isMobile} />
+            <DayElement key={dayData.day || index} data={dayData} />
           ))}
         </div>
         

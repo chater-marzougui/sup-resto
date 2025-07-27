@@ -8,7 +8,7 @@ import { DashboardLayout } from "../layouts/dashboardLayout";
 import { MealType, RoleEnum } from "@/server/db/enums";
 import { StatCard } from "@/components/elements/stat-card";
 import { WeeklyMealCalendar } from "./ui/weekly-meal-calendar";
-import { RecentTransactions } from "./ui/recent-transactions";
+import { RecentTransactions } from "./ui/recent-transactions/recent-transactions";
 import { DayMealsCard } from "./ui/day-meals-card";
 import { QRCodeCard } from "./ui/qr-code-card";
 import { LowBalanceAlert } from "./ui/low-balance-alert";
@@ -23,8 +23,7 @@ import { toast } from "sonner";
 interface StudentDashboardProps {}
 
 const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
-  const { user, transactions, isLoadingUser, isLoadingTransactions } =
-    useProfile();
+  const { user, isLoadingUser } = useProfile();
 
   const todayMeals = trpc.meal.getDayMeals.useQuery({
     userId: user?.id,
@@ -43,11 +42,11 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
 
   const utils = trpc.useUtils();
 
-  if (isLoadingUser || isLoadingTransactions) {
+  if (isLoadingUser) {
     return <LoadingSpinner />;
   }
 
-  if (!user || !transactions) {
+  if (!user) {
     return <div>Error loading user data</div>;
   }
 
@@ -106,12 +105,12 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
       <div className="space-y-6">
         {/* Low Balance Alert */}
         <LowBalanceAlert currentBalance={user?.balance} mealPrice={mealPrice} />
-
+        
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             title="Current Balance"
-            value={`${formatCurrency(user?.balance > 0 ? user?.balance : 0)}`}
+            value={`${formatCurrency(user?.balance)}`}
             icon={CreditCard}
             iconColor="text-blue-500"
             description={`≈ ${Math.floor(user?.balance / mealPrice)} meals`}
@@ -166,9 +165,9 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
             <WeeklyMealCalendar meals={weeklyMeals.data || []} />
           </div>
         </div>
+        
+        <RecentTransactions userId={user?.id} />
 
-        {/* Recent Transactions */}
-        <RecentTransactions transactions={transactions} />
       </div>
     </DashboardLayout>
   );

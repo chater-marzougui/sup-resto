@@ -26,7 +26,7 @@ export const mealRouter = createTRPCRouter({
           ...input,
           userId: ctx.user?.id || input.userId,
         };
-
+        console.log("Scheduling meal with input:", mealInput);
         return await MealService.scheduleMeal(mealInput);
       } catch (error) {
         if (error instanceof TRPCError) {

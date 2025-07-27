@@ -7,7 +7,7 @@ import { MealStatusBadge } from '@/components/elements/meal-status-badge';
 import { Clock, Plus, X } from 'lucide-react';
 import { MealType } from '@/server/db/enums';
 import { MealScheduleWithUser } from '@/server/trpc/services/meal-service';
-import { canScheduleMeal, canCancelMeal, formatMeals } from '@/lib/utils/main-utils';
+import { canScheduleMeal, canCancelMeal, formatMeals } from '@/lib/utils/meal-utils';
 
 interface DayMealsCardProps {
   meals: MealScheduleWithUser[];
@@ -42,11 +42,32 @@ export const DayMealsCard: React.FC<DayMealsCardProps> = ({
 }) => {
 
   const title = isToday ? "Today's Meals" : "Tomorrow's Meals";
-  const formattedMeals = formatMeals(meals, isToday ? 0 : 1, userId);
+  const date = new Date();
+  const isSunday = date.getDay() === 0;
+    if (isSunday && isToday) {
+      return (
+        <Card className="h-56 w-56">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5" />
+              <span>{title}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center space-y-2">
+            <div className="text-lg font-medium text-center">It's Sunday!</div>
+            <p className="text-sm text-muted-foreground text-center">
+              The cafeteria is closed today. Meals resume tomorrow.
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+  date.setDate(date.getDate() + (isToday ? 0 : 1));
+  const formattedMeals = formatMeals(meals, date, userId);
 
   if (isLoading) {
     return (
-      <Card className="flex-2">
+      <Card className="h-56 w-56">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Clock className="h-5 w-5" />
@@ -71,7 +92,7 @@ export const DayMealsCard: React.FC<DayMealsCardProps> = ({
   scheduleDate.setDate(scheduleDate.getDate() + (isToday ? 0 : 1));
 
   return (
-    <div className='flex-1'>
+    <div className='flex-1 h-56 w-56'>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">

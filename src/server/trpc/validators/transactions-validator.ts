@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { transactionTypeEnum } from "@/server/db/enums";
+import { get } from "http";
+import { getUserValidatorForTransaction } from "./user-validator";
 
 const amountValidator = z.number();
 
@@ -62,8 +64,24 @@ export const transactionPaginationValidator = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+export const cursorPaginationValidator = z.object({
+  cursor: z.string().optional(),
+  limit: z.number().min(1).max(100).default(20),
+});
+
+// Combined validator for cursor-based transaction queries
+export const cursorTransactionsValidator = z.object({
+  ...transactionFiltersValidator.shape,
+  ...cursorPaginationValidator.shape,
+});
+
+export type CursorTransactionsInput = z.infer<typeof cursorTransactionsValidator>;
+
 // Combined validator for paginated transaction queries
-export const paginatedTransactionsValidator = transactionFiltersValidator.merge(transactionPaginationValidator);
+export const paginatedTransactionsValidator = z.object({
+  ...transactionFiltersValidator.shape,
+  ...transactionPaginationValidator.shape,
+});
 
 // User balance query validator
 export const userBalanceValidator = z.object({
@@ -102,8 +120,21 @@ export const userTransactionHistoryValidator = z.object({
   type: z.enum(transactionTypeEnum.enumValues).optional(),
 });
 
+export const transactionWithProcessedByValidator = baseTransactionValidator.extend({
+  processedByUser: getUserValidatorForTransaction.nullable(),
+});
+
+export const getAllTransactionsValidator = z.object({
+  transactions: z.array(transactionWithProcessedByValidator).optional().default([]),
+  nextCursor: z.string().optional(),
+  hasNextPage: z.boolean().default(false),
+});
+
+export type GetAllTransactionsType = z.infer<typeof getAllTransactionsValidator>;
+
 // Export types
-export type BaseTransaction = z.infer<typeof baseTransactionValidator>;
+export type Transaction = z.infer<typeof baseTransactionValidator>;
+export type TransactionWithProcessedBy = z.infer<typeof transactionWithProcessedByValidator>;
 export type CreateTransactionInput = z.infer<typeof createTransactionValidator>;
 export type BulkScheduleInput = z.infer<typeof bulkScheduleValidator>;
 export type RefundTransactionInput = z.infer<typeof refundTransactionValidator>;

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq, and, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, asc, lt } from "drizzle-orm";
 import { db } from "@/server/db";
 import { mealSchedules, transactions, users } from "@/server/db/schema";
 import type {
@@ -7,10 +7,11 @@ import type {
   BulkScheduleInput,
   RefundTransactionInput,
   BalanceAdjustmentInput,
-  PaginatedTransactionsInput,
   TransactionStatsInput,
   BulkBalanceUpdateInput,
   UserTransactionHistoryInput,
+  CursorTransactionsInput,
+  GetAllTransactionsType,
 } from "../validators/transactions-validator";
 import { MealCosts } from "@/config/global-config";
 import { MealService } from "./meal-service";
@@ -21,6 +22,7 @@ export class TransactionService {
    */
   static async createTransaction(input: CreateTransactionInput) {
     return await db.transaction(async (tx) => {
+      console.log("Creating transaction:", input);
       try {
         const user = await tx.query.users.findFirst({
             where: eq(users.id, input.userId),
@@ -36,30 +38,26 @@ export class TransactionService {
 
         const currentBalance = user.balance;
         let newBalance = currentBalance;
-
-        // Calculate new balance based on transaction type
-        switch (input.type) {
-          case 'balance_recharge':
-            newBalance = currentBalance + Math.floor(input.amount);
-            break;
-          case 'meal_schedule':
-            newBalance = currentBalance - Math.floor(input.amount);
-            break;
-          case 'refund':
-            newBalance = currentBalance + Math.floor(input.amount);
-            break;
-          case 'balance_adjustment':
-            newBalance = currentBalance + Math.floor(input.amount);
-            break;
-          case 'meal_redemption':
-            // for meal redemption, it's free since the scheduled meal is already paid
-            newBalance = currentBalance; // No change in balance
-            break;
-          default:
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Invalid transaction type',
-            });
+        let amount = Math.floor(input.amount);
+        console.log("Processing transaction:", {
+          userId: input.userId,
+          type: input.type,
+          amount,
+          processedBy: input.processedBy,
+        });
+        
+        if(input.type === 'meal_schedule') {
+          console.log("Meal schedule transaction detected");
+          amount = - Math.floor(input.amount);
+          newBalance = currentBalance + amount;
+          console.log("New balance after meal schedule:", newBalance);
+          console.log("Meal cost:", amount);
+        } else if (input.type === 'balance_adjustment') {
+          const adjustment = amount - currentBalance;
+          newBalance = amount;
+          amount = adjustment;
+        } else {
+          newBalance = currentBalance + amount;
         }
 
         // Create transaction record
@@ -68,7 +66,7 @@ export class TransactionService {
           .values({
             userId: input.userId,
             type: input.type,
-            amount: input.amount,
+            amount: amount,
             processedBy: input.processedBy,
             createdAt: new Date(),
           })
@@ -221,20 +219,12 @@ export class TransactionService {
     }
 
     const userTransactions = await db.query.transactions.findMany({
-        columns: {
-          id: true,
-          userId: true,
-          type: true,
-          amount: true,
-          createdAt: true,
-          processedBy: true,
-        },
         where: and(...conditions),
         with: {
           processedByUser: {
             columns: {
-              firstName: true,
-              lastName: true,
+              id: true,
+              role: true,
             },
           },
         },
@@ -249,81 +239,69 @@ export class TransactionService {
   /**
    * Get all transactions with filters and pagination (admin only)
    */
-  static async getAllTransactions(input: PaginatedTransactionsInput) {
-    const conditions = [];
 
-    if (input.userId) {
-      conditions.push(eq(transactions.userId, input.userId));
-    }
+  static async getAllTransactions(input: CursorTransactionsInput): Promise<GetAllTransactionsType> {
+  const conditions = [];
+  
+  if (input.userId) {
+    conditions.push(eq(transactions.userId, input.userId));
+  }
+  if (input.type) {
+    conditions.push(eq(transactions.type, input.type));
+  }
+  if (input.startDate) {
+    conditions.push(gte(transactions.createdAt, input.startDate));
+  }
+  if (input.endDate) {
+    conditions.push(lte(transactions.createdAt, input.endDate));
+  }
+  if (input.processedBy) {
+    conditions.push(eq(transactions.processedBy, input.processedBy));
+  }
+  if (input.minAmount) {
+    conditions.push(gte(sql`CAST(${transactions.amount} AS DECIMAL)`, input.minAmount));
+  }
+  if (input.maxAmount) {
+    conditions.push(lte(sql`CAST(${transactions.amount} AS DECIMAL)`, input.maxAmount));
+  }
 
-    if (input.type) {
-      conditions.push(eq(transactions.type, input.type));
-    }
+  // Add cursor condition if provided
+  if (input.cursor) {
+    conditions.push(lt(transactions.id, input.cursor));
+  }
 
-    if (input.startDate) {
-      conditions.push(gte(transactions.createdAt, input.startDate));
-    }
+  // Get one extra record to check if there's a next page
 
-    if (input.endDate) {
-      conditions.push(lte(transactions.createdAt, input.endDate));
-    }
-
-    if (input.processedBy) {
-      conditions.push(eq(transactions.processedBy, input.processedBy));
-    }
-
-    if (input.minAmount) {
-      conditions.push(gte(sql`CAST(${transactions.amount} AS DECIMAL)`, input.minAmount));
-    }
-
-    if (input.maxAmount) {
-      conditions.push(lte(sql`CAST(${transactions.amount} AS DECIMAL)`, input.maxAmount));
-    }
-
-    // Get total count for pagination
-    const totalCountResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(transactions)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
-
-    const totalCount = totalCountResult[0].count;
-
-    // Build sort order
-    const sortOrder = input.sortOrder === 'asc' ? asc : desc;
-    const sortColumn = 
-      input.sortBy === 'amount' ? sql`CAST(${transactions.amount} AS DECIMAL)` :
-      input.sortBy === 'type' ? transactions.type :
-      transactions.createdAt;
-
-    const transactionsList = await db.query.transactions.findMany({
-      where: and(...conditions),
-      with: {
-        user: {
-          columns: {
-            firstName: true,
-            lastName: true,
-            cin: true,
-          },
-        },
-        processedByUser: {
-          columns: {
-            firstName: true,
-            lastName: true,
-          },
+  const transactionsList = await db.query.transactions.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    orderBy: desc(transactions.createdAt),  
+    limit: input.limit + 1,
+    with: {
+      processedByUser: {
+        columns: {
+          id: true,
+          role: true,
         },
       },
-      orderBy: sortOrder(sortColumn),
-      limit: input.limit,
-      offset: (input.page - 1) * input.limit,
-    });
+    }
+  });
 
-    return {
-      transactions: transactionsList,
-      totalCount,
-      totalPages: Math.ceil(totalCount / input.limit),
-      currentPage: input.page,
-    };
+  // Check if there are more records
+  const hasNextPage = transactionsList.length > input.limit;
+  
+  // Remove the extra record if it exists
+  let nextCursor = undefined;
+  if (hasNextPage) {
+    const el = transactionsList.pop();
+    nextCursor = el?.id;
   }
+
+  return {
+    transactions: transactionsList,
+    hasNextPage,
+    nextCursor,
+  };
+}
 
   /**
    * Get transaction statistics
@@ -419,30 +397,6 @@ export class TransactionService {
    * Get transaction by ID
    */
   static async getTransactionById(transactionId: string) {
-    // const transaction = await db
-    //   .select({
-    //     id: transactions.id,
-    //     userId: transactions.userId,
-    //     type: transactions.type,
-    //     amount: transactions.amount,
-    //     createdAt: transactions.createdAt,
-    //     processedBy: transactions.processedBy,
-    //     user: {
-    //       firstName: users.firstName,
-    //       lastName: users.lastName,
-    //       cin: users.cin,
-    //     },
-    //     processedByUser: {
-    //       firstName: sql<string>`processor.first_name`,
-    //       lastName: sql<string>`processor.last_name`,
-    //     },
-    //   })
-    //   .from(transactions)
-    //   .leftJoin(users, eq(transactions.userId, users.id))
-    //   .leftJoin(users.as('processor'), eq(transactions.processedBy, sql`processor.id`))
-    //   .where(eq(transactions.id, transactionId))
-    //   .limit(1);
-
     const transaction = await db.query.transactions.findFirst({
       where: eq(transactions.id, transactionId),
       with: {

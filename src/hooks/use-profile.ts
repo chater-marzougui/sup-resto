@@ -10,11 +10,6 @@ export function useProfile() {
   // Get user profile
   const { data: user, isLoading: isLoadingUser, refetch: refetchUser } = trpc.user.getProfile.useQuery();
 
-  const { data: transactions, isLoading: isLoadingTransactions } = trpc.transaction.getUserTransactionHistory.useQuery(
-    { userId: user?.id ?? "", limit: 10 },
-    { enabled: !!user?.id }
-  );
-
   // Update profile mutation
   const updateProfileMutation = trpc.user.updateProfile.useMutation({
     onSuccess: () => {
@@ -47,9 +42,7 @@ export function useProfile() {
 
   return {
     user,
-    transactions,
     isLoadingUser,
-    isLoadingTransactions,
     isEditing,
     setIsEditing,
     updateProfile,

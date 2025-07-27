@@ -12,6 +12,7 @@ import {
 import { StatusHistoryEntry } from "@/server/db/schema";
 import { MealCosts, maxMealsInRed, mealTimeEnum } from "@/config/global-config";
 import { transactionTypeEnum, ScheduleStatusType, MealType } from "@/server/db/enums";
+import {TransactionService} from "./transactions-service";
 
 // Types
 export type MealScheduleWithUser = {
@@ -78,7 +79,7 @@ export class MealService {
     }
     
     // Check for duplicate booking
-    const existingMeal = await db.select()
+    const [existingMeal] = await db.select()
       .from(mealSchedules)
       .where(and(
         eq(mealSchedules.userId, userId),
@@ -87,7 +88,7 @@ export class MealService {
       ))
       .limit(1);
     
-    if (existingMeal.length && existingMeal[0].status === 'scheduled') {
+    if (existingMeal && existingMeal.status === 'scheduled') {
       throw new TRPCError({
         code: 'CONFLICT',
         message: 'Meal already scheduled for this time and date',
@@ -96,12 +97,12 @@ export class MealService {
 
     let Meal;
 
-    if (existingMeal.length && existingMeal[0].status !== 'not_created') {
+    if (existingMeal && existingMeal.status !== 'not_created') {
       this.updateMealStatus({
-        mealId: existingMeal[0].id,
+        mealId: existingMeal.id,
         status: 'scheduled',
       });
-      Meal =  existingMeal[0];
+      Meal =  existingMeal;
     } else {
       // Create status history entry
       const statusHistory: StatusHistoryEntry[] = [{
@@ -132,22 +133,16 @@ export class MealService {
       Meal = newMeal[0];
     }
     
-    // Deduct balance
-    console.log(`Deducting ${MEAL_COST} from user balance`, userId);
-    await db.update(users)
-      .set({ balance: sql`${users.balance} - ${MEAL_COST}` })
-      .where(eq(users.id, userId));
-    
     // Record transaction
-    await db.insert(transactions).values({
+    await TransactionService.createTransaction({
       userId,
-      type: transactionTypeEnum.enumValues[1],
+      type: transactionTypeEnum.enumValues[1], // Meal schedule
       amount: MEAL_COST,
       processedBy: userId,
     });
     
     // Return meal with user info
-    return await this.getMealById(Meal.id);
+    return Meal;
   }
 
   /**
@@ -274,46 +269,33 @@ export class MealService {
     }
 
     let status: 'cancelled' | 'refunded' = 'cancelled';
+    const userRole = await db.select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+    const MEAL_COST = MealCosts[userRole[0].role] || 200;
 
     if (meal[0].scheduledDate > new Date(new Date().getTime() - 3 * 60 * 60 * 1000)) {
-        const userRole = await db.select({ role: users.role })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-    
-        const MEAL_COST = MealCosts[userRole[0].role] || 200;
-        await Promise.all([
-        db.update(users)
-            .set({ balance: sql`${users.balance} + ${MEAL_COST}` })
-            .where(eq(users.id, userId)),
-        
-        db.insert(transactions).values({
-            userId,
-            type: transactionTypeEnum.enumValues[2], // Assuming 2 is refund type
-            amount: MEAL_COST,
-            processedBy: userId,
-        })
-        ]);
-
-        status = 'refunded';
+      status = 'refunded';
+      await TransactionService.createTransaction({
+        userId,
+        type: transactionTypeEnum.enumValues[2], // Refund
+        amount: MEAL_COST,
+        processedBy: userId,
+      });
     }
 
     // Update status history
-    meal[0].statusHistory?.push(
-      {
-        status: status,
-        timestamp: new Date().toISOString(),
-      }
-    );
+    meal[0].statusHistory?.push({
+      status: status,
+      timestamp: new Date().toISOString(),
+    });
 
     // Update meal status
-    await db.update(mealSchedules)
-      .set({ 
-        status: status,
-        statusHistory: meal[0].statusHistory,
-        updatedAt: new Date()
-      })
-      .where(eq(mealSchedules.id, mealId));
+    await this.updateMealStatus({
+      mealId: meal[0].id,
+      status: status,
+    });
     
     return await this.getMealById(mealId);
   }

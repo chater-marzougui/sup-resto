@@ -39,13 +39,13 @@ export const QRCodeCard: React.FC<QRCodeCardProps> = ({ cin, userName }) => {
                 <DialogHeader>
                   <DialogTitle>QR Code - {userName}</DialogTitle>
                 </DialogHeader>
-                <div className="flex flex-col items-center space-y-4 p-4">
+                <div className="flex flex-col items-center space-y-4">
                   <QRCodeGenerator 
                     value={cin} 
                     size={280}
                     includeMargin={true}
                   />
-                  <p className="text-sm text-gray-600 text-center">
+                  <p className="text-sm text-foreground text-center">
                     CIN: {cin}
                   </p>
                 </div>

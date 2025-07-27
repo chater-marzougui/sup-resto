@@ -22,11 +22,10 @@ export interface AuthContext {
 
 export const createTRPCContext = async (opts: CreateNextContextOptions): Promise<AuthContext> => {
   const { req, res } = opts;
-  
   // Get token from Authorization header
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  
+
   let user = null;
   
   if (token) {
@@ -52,7 +51,6 @@ export const enforceUserIsAuthed = (ctx: AuthContext) => {
       message: 'You must be logged in to access this resource',
     });
   }
-  
   return ctx;
 };
 
