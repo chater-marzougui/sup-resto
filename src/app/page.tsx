@@ -1,10 +1,11 @@
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <h1 className="text-4xl font-bold text-center sm:text-left">Welcome to Sup Resto</h1>
-        <p className="text-lg text-gray-700 text-center sm:text-left">
-          Your one-stop solution for restaurant management.
+    <>
+      <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+          <h1 className="text-4xl font-bold text-center sm:text-left">Welcome to Sup Resto</h1>
+          <p className="text-lg text-gray-700 text-center sm:text-left">
+            Your one-stop solution for restaurant management.
         </p>
         <div className="flex flex-col sm:flex-row gap-4">
           <a href="/auth/login" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -20,5 +21,6 @@ export default function Home() {
         <p>Built with ❤️ by the Sup Resto Team</p>
       </footer>
     </div>
+  </>
   );
 }

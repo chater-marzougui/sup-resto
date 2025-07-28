@@ -225,7 +225,6 @@ export const transactionRouter = createTRPCRouter({
             message: 'Cannot access other users\' transaction history',
           });
         }
-        console.log("Fetching transaction history for user:", input);
         return await TransactionService.getUserTransactionHistory(input);
       } catch (error) {
         if (error instanceof TRPCError) {

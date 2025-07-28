@@ -123,6 +123,26 @@ export const mealRouter = createTRPCRouter({
       }
     }),
 
+  /** 
+   * Cancel multiple meals
+   */
+  cancelManyMeals: protectedProcedure
+    .input(scheduleManyMealsValidator)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await MealService.cancelManyMeals(input);
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to cancel meals",
+          cause: error,
+        });
+      }
+    }),
+
   /**
    * Update meal status (admin only)
    */
@@ -177,8 +197,6 @@ export const mealRouter = createTRPCRouter({
       userId: input?.userId || ctx.user?.id,
       isToday: input?.isToday ?? true,
     };
-
-    console.log('Fetching meals for:', modifiedInput);
 
     try {
       return await MealService.getDayMeals(modifiedInput);

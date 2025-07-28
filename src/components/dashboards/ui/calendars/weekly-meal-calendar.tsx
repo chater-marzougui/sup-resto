@@ -14,7 +14,7 @@ import { scheduleStatusEnum } from "@/server/db/enums";
 interface WeeklyMealCalendarProps {
   meals: MealScheduleWithUser[];
   isLoading?: boolean;
-  onScheduleMeals?: (selectedDays: string[], mealTypes: string[]) => void;
+  onScheduleMeals?: (isSuccess: boolean) => void;
 }
 
 const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {

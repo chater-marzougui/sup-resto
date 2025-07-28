@@ -152,3 +152,13 @@ const setMealTime = (date: Date, mealTime: MealType): Date => {
   newDate.setHours(hours, minutes, seconds, milliseconds);
   return newDate;
 };
+
+export const cancelOrRefundMeal = (
+  meal: MealScheduleWithUser
+): 'cancelled' | 'refunded' => {
+  if (meal.scheduledDate > new Date(new Date().getTime() - 3 * 60 * 60 * 1000)) {
+    return 'refunded';
+  } else {
+    return 'cancelled';
+  }
+};

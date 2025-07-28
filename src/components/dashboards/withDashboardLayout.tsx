@@ -4,6 +4,7 @@ import React from 'react';
 import { useAuth } from '@/components/auth/use-auth';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../elements/LoadingSpinner';
+import { Toaster } from 'sonner';
 
 interface WithDashboardLayoutProps {
   requiredRole?: number;

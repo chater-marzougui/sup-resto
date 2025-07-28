@@ -23,19 +23,22 @@ import {
   dayMealData,
   daysOfWeek,
 } from "@/lib/utils/meal-utils";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { useAuth } from "@/components/auth/use-auth";
+import LoadingSpinner from "@/components/elements/LoadingSpinner";
 
 type ActionType = "schedule" | "cancel";
 type MealSelection = {
   day: string;
+  mealDate: Date;
   mealType: MealType;
 };
 
 interface ScheduleMealDialogProps {
   weeklyMeals: (dayMealData | undefined)[];
   onScheduleMeals?: (
-    selectedDays: string[],
-    mealTypes: string[],
-    action: ActionType
+    isSuccess: boolean,
   ) => void;
 }
 
@@ -47,7 +50,7 @@ const DayMealsSelection: React.FC<{
   dayData?: dayMealData;
   selectedMeals: MealSelection[];
   selectedAction: ActionType;
-  onMealToggle: (day: string, mealType: MealType) => void;
+  onMealToggle: (day: string, mealDate: Date, mealType: MealType) => void;
 }> = ({ day, dayData, selectedMeals, selectedAction, onMealToggle }) => {
   // Don't render if no data or day is in the past
   if (!dayData || dayData.lunch.scheduledDate < new Date()) {
@@ -87,7 +90,7 @@ const DayMealsSelection: React.FC<{
             id={`${day}-lunch`}
             checked={isLunchSelected || isAlreadyChecked("lunch")}
             disabled={!canSelectLunch}
-            onCheckedChange={() => onMealToggle(day, "lunch")}
+            onCheckedChange={() => onMealToggle(day, dayData.lunch?.scheduledDate, "lunch")}
           />
           <label
             htmlFor={`${day}-lunch`}
@@ -108,7 +111,7 @@ const DayMealsSelection: React.FC<{
             id={`${day}-dinner`}
             checked={isDinnerSelected || isAlreadyChecked("dinner")}
             disabled={!canSelectDinner}
-            onCheckedChange={() => onMealToggle(day, "dinner")}
+            onCheckedChange={() => onMealToggle(day, dayData.dinner?.scheduledDate, "dinner")}
           />
           <label
             htmlFor={`${day}-dinner`}
@@ -134,6 +137,38 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMeals, setSelectedMeals] = useState<MealSelection[]>([]);
   const [selectedAction, setSelectedAction] = useState<ActionType>("schedule");
+  const { user, isLoading } = useAuth();
+  
+  const utils = trpc.useUtils();
+  const scheduleManyMealsMutation = trpc.meal.scheduleManyMeals.useMutation({
+    onSuccess: () => {
+      toast.success("Meals scheduled successfully");
+      setSelectedMeals([]);
+      utils.invalidate();
+      setIsOpen(false);
+      onScheduleMeals?.(true);
+    },
+    onError: (error) => {
+      toast.error("Failed to schedule meals");
+      console.error("Error scheduling meals:", error);
+      onScheduleMeals?.(false);
+    },
+  });
+
+  const cancelManyMealsMutation = trpc.meal.cancelManyMeals.useMutation({
+    onSuccess: () => {
+      toast.success("Meals cancelled successfully");
+      setSelectedMeals([]);
+      utils.invalidate();
+      setIsOpen(false);
+      onScheduleMeals?.(true);
+    },
+    onError: (error) => {
+      toast.error("Failed to cancel meals");
+      console.error("Error cancelling meals:", error);
+      onScheduleMeals?.(false);
+    },
+  });
 
   // Filter out past days and undefined meals
   const weeklyMealsData = weeklyMeals.filter((meal) => {
@@ -144,7 +179,7 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
     );
   });
 
-  const handleMealToggle = (day: string, mealType: MealType) => {
+  const handleMealToggle = (day: string, mealDate: Date, mealType: MealType) => {
     setSelectedMeals((prev) => {
       const existingIndex = prev.findIndex(
         (meal) => meal.day === day && meal.mealType === mealType
@@ -155,7 +190,7 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
         return prev.filter((_, index) => index !== existingIndex);
       } else {
         // Add new selection
-        return [...prev, { day, mealType }];
+        return [...prev, { day, mealDate, mealType }];
       }
     });
   };
@@ -169,10 +204,10 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
       const dayData = weeklyMealsData.find((meal) => meal?.day === day);
       if (dayData) {
         if (actionCheck(dayData.lunch)) {
-          availableMeals.push({ day, mealType: "lunch" });
+          availableMeals.push({ day, mealDate: dayData.lunch?.scheduledDate, mealType: "lunch" });
         }
         if (actionCheck(dayData.dinner)) {
-          availableMeals.push({ day, mealType: "dinner" });
+          availableMeals.push({ day, mealDate: dayData.dinner?.scheduledDate, mealType: "dinner" });
         }
       }
     });
@@ -184,16 +219,28 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
     setSelectedMeals([]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedMeals.length === 0) return;
+    if (selectedAction === "schedule") {
+      // Schedule meals
+      await scheduleManyMealsMutation.mutateAsync({
+        meals: selectedMeals.map((meal) => ({
+          mealType: meal.mealType,
+          mealDate: new Date(meal.mealDate),
+        })),
+        userId: user?.id!, // Assuming you have a way to get the current user ID
+      });
+    } else if (selectedAction === "cancel") {
+      // Cancel meals
+      await cancelManyMealsMutation.mutateAsync({
+        meals: selectedMeals.map((meal) => ({
+          mealType: meal.mealType,
+          mealDate: new Date(meal.mealDate),
+        })),
+        userId: user?.id!,
+      });
+    }
 
-    // Group selections by day and meal type for the callback
-    const selectedDays = [...new Set(selectedMeals.map((meal) => meal.day))];
-    const selectedMealTypes = [
-      ...new Set(selectedMeals.map((meal) => meal.mealType)),
-    ];
-
-    onScheduleMeals?.(selectedDays, selectedMealTypes, selectedAction);
     setIsOpen(false);
     clearSelections();
   };
@@ -205,6 +252,14 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
   };
 
   const hasSelections = selectedMeals.length > 0;
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user) {
+    return <div>Error loading user data</div>;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
