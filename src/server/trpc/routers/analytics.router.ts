@@ -7,7 +7,6 @@ import {
   balanceHistoryValidator,
   monthlySpendingValidator,
   comparativeAnalyticsValidator,
-  predictiveAnalyticsValidator,
   systemAnalyticsValidator,
   timeRangeValidator,
   topSpendersValidator,

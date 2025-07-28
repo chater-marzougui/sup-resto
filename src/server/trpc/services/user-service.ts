@@ -3,62 +3,7 @@ import { users } from "@/server/db/schema";
 import { eq, and, or, ilike, desc, asc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { TRPCError } from "@trpc/server";
-
-// Types
-export type CreateUserInput = {
-  cin: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  role?: number;
-  password: string;
-  balance?: number;
-};
-
-export type UpdateUserInput = {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  role?: number;
-  balance?: number;
-  isActive?: boolean;
-};
-
-export type UserFilters = {
-  search?: string;
-  role?: number;
-  isActive?: boolean;
-};
-
-export type PaginationOptions = {
-  page?: number;
-  limit?: number;
-  sortBy?: 'createdAt' | 'firstName' | 'lastName' | 'lastLogin';
-  sortOrder?: 'asc' | 'desc';
-};
-
-export type UserWithoutPassword = {
-  id: string;
-  cin: string;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  role: number;
-  balance: number;
-  isActive: boolean;
-  lastLogin: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type PaginatedUsers = {
-  users: UserWithoutPassword[];
-  totalCount: number;
-  totalPages: number;
-  currentPage: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-};
+import { CreateUserInput, GetPaginatedUsers, UpdateUserInput, UserFiltersInput, UserPaginationInput, UserWithoutPassword } from "../validators/user-validator";
 
 export class UserService {
   /**
@@ -138,7 +83,7 @@ export class UserService {
       cin,
       firstName,
       lastName,
-      email: email || null,
+      email,
       role,
       password: hashedPassword,
       balance,
@@ -159,8 +104,8 @@ export class UserService {
   /**
    * Update user
    */
-  static async update(id: string, input: UpdateUserInput): Promise<UserWithoutPassword> {
-    const { firstName, lastName, email, role, balance, isActive } = input;
+  static async update(input: UpdateUserInput): Promise<UserWithoutPassword> {
+    const { id, firstName, lastName, email, role, balance, isActive } = input;
 
     // Check if user exists
     const existingUser = await db.select().from(users).where(eq(users.id, id)).limit(1);
@@ -249,21 +194,14 @@ export class UserService {
    * Get all users with pagination and filtering
    */
   static async getAll(
-    filters: UserFilters = {},
-    pagination: PaginationOptions = {}
-  ): Promise<PaginatedUsers> {
+    filters: UserFiltersInput = {},
+    pagination?: UserPaginationInput
+  ): Promise<GetPaginatedUsers> {
     const { 
       search, 
       role, 
       isActive 
     } = filters;
-
-    const { 
-      page = 1, 
-      limit = 10, 
-      sortBy = 'createdAt', 
-      sortOrder = 'desc' 
-    } = pagination;
 
     // Build where conditions
     const whereConditions = [];
@@ -290,23 +228,23 @@ export class UserService {
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
     // Build sort clause
-    const sortColumn = users[sortBy];
-    const sortClause = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+    const sortColumn = users[pagination?.sortBy || 'createdAt'];
+    const sortClause = pagination?.sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
     // Calculate offset
-    const offset = (page - 1) * limit;
+    const offset = (pagination?.page ? pagination.page - 1 : 0) * (pagination?.limit ? pagination.limit : 10);
 
     // Get total count
     const totalCountResult = await db.select({ count: users.id }).from(users).where(whereClause);
     const totalCount = totalCountResult.length;
 
     // Get users
-    const userResults = await db.select()
-      .from(users)
-      .where(whereClause)
-      .orderBy(sortClause)
-      .limit(limit)
-      .offset(offset);
+    const userResults = await db.query.users.findMany({
+      where: whereClause,
+      orderBy: pagination?.sortBy ? sortClause : undefined,
+      limit: pagination?.limit ? pagination.limit : undefined,
+      offset: offset,
+    });
 
     // Remove passwords from results
     const usersWithoutPassword = userResults.map(user => {
@@ -315,15 +253,15 @@ export class UserService {
     });
 
     // Calculate pagination info
-    const totalPages = Math.ceil(totalCount / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const totalPages = pagination?.limit ? Math.ceil(totalCount / pagination.limit) : 1;
+    const hasNextPage = pagination?.page ? pagination.page < totalPages : false;
+    const hasPrevPage = pagination?.page ? pagination.page > 1 : false;
 
     return {
       users: usersWithoutPassword,
       totalCount,
       totalPages,
-      currentPage: page,
+      currentPage: pagination?.page || 1,
       hasNextPage,
       hasPrevPage,
     };

@@ -11,12 +11,12 @@ import {
   bulkBalanceUpdateValidator,
   transactionIdValidator,
   userTransactionHistoryValidator,
-  baseTransactionValidator,
   cursorTransactionsValidator,
   getAllTransactionsValidator,
   transactionWithProcessedByValidator
 } from "../validators/transactions-validator";
 import { RoleEnum } from "@/server/db/enums";
+import { userIdValidator } from "../validators/user-validator";
 
 export const transactionRouter = createTRPCRouter({
   /**
@@ -108,9 +108,7 @@ export const transactionRouter = createTRPCRouter({
    * Redeem meal (deduct from balance)
    */
   redeemMeal: protectedProcedure
-    .input(z.object({
-      userId: z.string().min(1, "User ID is required")
-    }))
+    .input(userIdValidator)
     .mutation(async ({ ctx, input }) => {
 
         // Check if user is authenticated
@@ -130,7 +128,7 @@ export const transactionRouter = createTRPCRouter({
           });
         }
 
-        return await TransactionService.redeemMeal(input.userId);
+        return await TransactionService.redeemMeal(input.id);
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;

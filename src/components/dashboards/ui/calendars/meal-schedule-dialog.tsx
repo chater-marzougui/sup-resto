@@ -1,5 +1,5 @@
 // src/components/dashboard/schedule-meal-dialog.tsx
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,119 @@ interface ScheduleMealDialogProps {
 const weekdayToday = new Date().getDay() === 0 ? 0 : new Date().getDay() - 1;
 const DAYS = daysOfWeek.slice(weekdayToday);
 
+// Tab Navigation Component
+const TabNavigation: React.FC<{
+  selectedAction: ActionType;
+  onActionChange: (action: ActionType) => void;
+}> = ({ selectedAction, onActionChange }) => {
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const scheduleTabRef = useRef<HTMLButtonElement>(null);
+  const cancelTabRef = useRef<HTMLButtonElement>(null);
+
+  // Touch/swipe handling
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && selectedAction === "schedule") {
+      onActionChange("cancel");
+    }
+    if (isRightSwipe && selectedAction === "cancel") {
+      onActionChange("schedule");
+    }
+  };
+
+  // Update indicator position
+  useEffect(() => {
+    const updateIndicator = () => {
+      const activeTab = selectedAction === "schedule" ? scheduleTabRef.current : cancelTabRef.current;
+      const tabsContainer = tabsRef.current;
+      
+      if (activeTab && tabsContainer) {
+        const containerRect = tabsContainer.getBoundingClientRect();
+        const tabRect = activeTab.getBoundingClientRect();
+        
+        setIndicatorStyle({
+          left: tabRect.left - containerRect.left,
+          width: tabRect.width,
+        });
+      }
+    };
+
+    updateIndicator();
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(updateIndicator, 50);
+    return () => clearTimeout(timer);
+  }, [selectedAction]);
+
+  return (
+    <div className="space-y-4">
+      <div 
+        ref={tabsRef}
+        className="relative bg-gray-100 dark:bg-gray-800 rounded-lg p-1 max-w-md mx-auto"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Sliding indicator */}
+        <div
+          className="absolute top-1 bottom-1 bg-white dark:bg-gray-700 rounded-md shadow-sm transition-all duration-300 ease-out z-10"
+          style={{
+            left: `${indicatorStyle.left}px`,
+            width: `${indicatorStyle.width}px`,
+          }}
+        />
+        
+        <div className="relative z-20 flex">
+          <button
+            ref={scheduleTabRef}
+            onClick={() => onActionChange("schedule")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 ${
+              selectedAction === "schedule"
+                ? "text-green-700 dark:text-green-400"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Schedule Meals
+          </button>
+          
+          <button
+            ref={cancelTabRef}
+            onClick={() => onActionChange("cancel")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md text-sm font-medium transition-all duration-200 ${
+              selectedAction === "cancel"
+                ? "text-red-600 dark:text-red-400"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            }`}
+          >
+            <XCircle className="w-4 h-4" />
+            Cancel Meals
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DayMealsSelection: React.FC<{
   day: string;
   dayData?: dayMealData;
@@ -80,8 +193,8 @@ const DayMealsSelection: React.FC<{
   };
 
   return (
-    <div className="p-3 border rounded-lg">
-      <div className="text-sm font-medium mb-3 text-center">{day}</div>
+    <div className="p-3 border rounded-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+      <div className="text-sm font-medium mb-3 text-center text-gray-800 dark:text-gray-200">{day}</div>
 
       <div className="flex space-x-2">
         {/* Lunch */}
@@ -264,60 +377,47 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="hover:bg-gray-50 dark:hover:bg-gray-800">
           <Settings className="w-4 h-4 mr-2" />
           Manage Meals
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto custom-scrollbar">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-200">
             <Calendar className="w-5 h-5" />
             Batch Meal Actions
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Action Selection */}
-          <div>
-            <h3 className="text-sm font-medium mb-3">Action</h3>
-            <div className="flex gap-2">
-              <Button
-                variant={selectedAction === "schedule" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleActionChange("schedule")}
-                className="flex items-center gap-2"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Schedule Meals
-              </Button>
-              <Button
-                variant={selectedAction === "cancel" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleActionChange("cancel")}
-                className="flex items-center gap-2"
-              >
-                <XCircle className="w-4 h-4" />
-                Cancel Meals
-              </Button>
-            </div>
-          </div>
+          {/* Tab Navigation */}
+          <TabNavigation
+            selectedAction={selectedAction}
+            onActionChange={handleActionChange}
+          />
 
-          <Separator />
+          <Separator className="bg-gray-200 dark:bg-gray-700" />
 
           {/* Day Selection */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium">Select Meals</h3>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Meals</h3>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleSelectAllAvailable}
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 >
                   Select All Available
                 </Button>
-                <Button variant="ghost" size="sm" onClick={clearSelections}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearSelections}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
                   Clear All
                 </Button>
               </div>
@@ -340,10 +440,22 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4 justify-end">
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsOpen(false)}
+            className="hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
             Close
           </Button>
-          <Button onClick={handleSubmit} disabled={!hasSelections}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!hasSelections}
+            className={`${
+              selectedAction === "schedule"
+                ? "bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
+                : "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+            } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
             {selectedAction === "schedule"
               ? "Schedule Selected Meals"
               : "Cancel Selected Meals"}

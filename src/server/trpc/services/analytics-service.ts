@@ -8,7 +8,6 @@ import type {
   BalanceHistoryInput,
   MonthlySpendingInput,
   ComparativeAnalyticsInput,
-  PredictiveAnalyticsInput,
   SystemAnalyticsInput,
   TimeRangeInput,
   TopSpendersInput,

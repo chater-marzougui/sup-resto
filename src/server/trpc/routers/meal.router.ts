@@ -64,7 +64,9 @@ export const mealRouter = createTRPCRouter({
    * Get current user's meals with optional filters
    */
   getUserMeals: protectedProcedure
-    .input(mealFiltersValidator)
+    .input(mealFiltersValidator.extend({
+      userId: z.string(),
+    }))
     .query(async ({ ctx, input }) => {
       try {
         return await MealService.getUserMeals(input.userId, input);
@@ -110,7 +112,7 @@ export const mealRouter = createTRPCRouter({
     .input(cancelMealValidator)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await MealService.cancelMeal(input.mealId, input.userId);
+        return await MealService.cancelMeal(input.userId, input.id);
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;

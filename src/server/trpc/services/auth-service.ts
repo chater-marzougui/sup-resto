@@ -4,39 +4,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { TRPCError } from "@trpc/server";
-
-// Types
-export type LoginInput = {
-  cin: string;
-  password: string;
-};
-
-export type RegisterInput = {
-  cin: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  password: string;
-};
-
-export type AuthUser = {
-  id: string;
-  cin: string;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  role: number;
-  balance: number;
-  isActive: boolean;
-  lastLogin: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type AuthResponse = {
-  user: Omit<AuthUser, 'password'>;
-  token?: string;
-};
+import { LoginInput, RegisterUserInput, UserWithoutPassword } from "../validators/user-validator";
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -46,7 +14,7 @@ export class AuthService {
   /**
    * Login user with CIN and password
    */
-  static async login(input: LoginInput): Promise<AuthResponse> {
+  static async login(input: LoginInput): Promise<{ user: UserWithoutPassword; token: string }> {
     const { cin, password } = input;
     console.log("Attempting to login with CIN:", cin);
 
@@ -102,14 +70,14 @@ export class AuthService {
     const { password: _, ...userWithoutPassword } = foundUser;
     return {
       user: userWithoutPassword,
-      token,
+      token
     };
   }
 
   /**
    * Register new user
    */
-  static async register(input: RegisterInput): Promise<AuthResponse> {
+  static async register(input: RegisterUserInput): Promise<{ user: UserWithoutPassword; token: string }> {
     const { cin, firstName, lastName, email, password } = input;
 
     // Check if user already exists
@@ -141,7 +109,7 @@ export class AuthService {
       cin,
       firstName,
       lastName,
-      email: email || null,
+      email,
       password: hashedPassword,
       role: 5, // Default role (normalUser)
       balance: 0,
@@ -179,7 +147,7 @@ export class AuthService {
   /**
    * Verify JWT token and get user
    */
-  static async verifyToken(token: string): Promise<AuthUser> {
+  static async verifyToken(token: string): Promise<UserWithoutPassword> {
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
       
@@ -215,7 +183,7 @@ export class AuthService {
   /**
    * Get user by CIN
    */
-  static async getUserByCin(cin: string): Promise<AuthUser | null> {
+  static async getUserByCin(cin: string): Promise<UserWithoutPassword | null> {
     const user = await db.select().from(users).where(eq(users.cin, cin)).limit(1);
     
     if (!user.length) {
@@ -229,7 +197,7 @@ export class AuthService {
   /**
    * Get user by ID
    */
-  static async getUserById(id: string): Promise<AuthUser | null> {
+  static async getUserById(id: string): Promise<UserWithoutPassword | null> {
     const user = await db.select().from(users).where(eq(users.id, id)).limit(1);
     
     if (!user.length) {

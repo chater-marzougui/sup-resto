@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { mealSchedules, users, transactions } from "@/server/db/schema";
+import { mealSchedules, users } from "@/server/db/schema";
 import { eq, and, or, gte, lte, desc, asc, sql, count } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
@@ -19,7 +19,6 @@ import {
 import { TransactionService } from "./transactions-service";
 import { getDayMonthYear } from "@/lib/utils/main-utils";
 import { cancelOrRefundMeal } from "@/lib/utils/meal-utils";
-import { ca } from "zod/v4/locales";
 
 // Types
 export type MealScheduleWithUser = {
@@ -330,8 +329,8 @@ export class MealService {
    * Cancel a meal
    */
   static async cancelMeal(
+    userId: string,
     mealId: string,
-    userId: string
   ): Promise<MealScheduleWithUser> {
     const meal = await db
       .select()

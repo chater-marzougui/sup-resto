@@ -3,17 +3,30 @@ import { z } from "zod";
 // Base user validator with all fields
 export const baseUserValidator = z.object({
   id: z.string().min(1, "User ID is required"),
-  cin: z.string().min(8, "CIN must be at least 8 characters").max(20, "CIN must not exceed 20 characters"),
+  cin: z.string().min(5, "CIN must be at least 5 characters").max(24, "CIN must not exceed 24 characters"),
   firstName: z.string().min(1, "First name is required").max(100, "First name must not exceed 100 characters"),
   lastName: z.string().min(1, "Last name is required").max(100, "Last name must not exceed 100 characters"),
-  email: z.email("Invalid email format").optional(),
-  password: z.string().min(6, "Password must be at least 6 characters").max(100, "Password must not exceed 100 characters"),
-  role: z.number().int().min(1).max(5).default(5),
+  email: z.email("Invalid email format"),
+  password: z.string().min(5, "Password must be at least 5 characters").max(100, "Password must not exceed 100 characters"),
+  role: z.number().int().min(1).max(6).default(6),
   balance: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
-  lastLogin: z.date().optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
+  lastLogin: z.date().optional().nullable(),
+  createdAt: z.date().optional().nullable(),
+  updatedAt: z.date().optional().nullable(),
+});
+
+export const UserWithoutPasswordValidator = baseUserValidator.omit({
+  password: true,
+});
+
+export const paginatedUsersValidator = z.object({
+  users: z.array(UserWithoutPasswordValidator),
+  totalCount: z.number().int().min(0),
+  totalPages: z.number().int().min(1).default(1),
+  currentPage: z.number().int().min(1).default(1),
+  hasNextPage: z.boolean().default(false),
+  hasPrevPage: z.boolean().default(false),
 });
 
 export const getUserValidatorForTransaction = z.object({
@@ -54,8 +67,8 @@ export const emailValidator = baseUserValidator.pick({ email: true }).required({
 // Password change validator
 export const changePasswordValidator = baseUserValidator.pick({ id: true }).extend({
   currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(6, "New password must be at least 6 characters").max(100, "Password must not exceed 100 characters"),
-  confirmPassword: z.string().min(1, "Password confirmation is required"),
+  newPassword: z.string().min(5, "New password must be at least 5 characters").max(100, "Password must not exceed 100 characters"),
+  confirmPassword: z.string().min(5, "Password confirmation is required"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -98,7 +111,7 @@ export const userPaginationValidator = z.object({
 });
 
 // Combined validator for paginated user queries
-export const paginatedUsersValidator = userFiltersValidator.merge(userPaginationValidator);
+export const paginatedUsersInputValidator = userFiltersValidator.merge(userPaginationValidator);
 
 // User registration validator (stricter validation for public registration)
 export const registerUserValidator = baseUserValidator.omit({
@@ -110,12 +123,11 @@ export const registerUserValidator = baseUserValidator.omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  firstName: z.string().min(2, "First name must be at least 2 characters").max(50, "First name must not exceed 50 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters").max(50, "Last name must not exceed 50 characters"),
-  email: z.string().email("Invalid email format"), // Make email required for registration
-  password: z.string().min(8, "Password must be at least 8 characters").max(100, "Password must not exceed 100 characters")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one lowercase letter, one uppercase letter, and one number"),
-  confirmPassword: z.string().min(1, "Password confirmation is required"),
+  firstName: baseUserValidator.shape.firstName,
+  lastName: baseUserValidator.shape.lastName,
+  email: baseUserValidator.shape.email,
+  password: baseUserValidator.shape.password,
+  confirmPassword: baseUserValidator.shape.password,
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -124,8 +136,12 @@ export const registerUserValidator = baseUserValidator.omit({
 // Update last login validator
 export const updateLastLoginValidator = baseUserValidator.pick({ id: true });
 
+paginatedUsersValidator
+
 // Export types
 export type BaseUser = z.infer<typeof baseUserValidator>;
+export type UserWithoutPassword = z.infer<typeof UserWithoutPasswordValidator>;
+export type GetPaginatedUsers = z.infer<typeof paginatedUsersValidator>;
 export type CreateUserInput = z.infer<typeof createUserValidator>;
 export type UpdateUserInput = z.infer<typeof updateUserValidator>;
 export type LoginInput = z.infer<typeof loginValidator>;
@@ -137,6 +153,6 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordValidator>;
 export type ToggleUserStatusInput = z.infer<typeof toggleUserStatusValidator>;
 export type UserFiltersInput = z.infer<typeof userFiltersValidator>;
 export type UserPaginationInput = z.infer<typeof userPaginationValidator>;
-export type PaginatedUsersInput = z.infer<typeof paginatedUsersValidator>;
+export type PaginatedUsersInput = z.infer<typeof paginatedUsersInputValidator>;
 export type RegisterUserInput = z.infer<typeof registerUserValidator>;
 export type UpdateLastLoginInput = z.infer<typeof updateLastLoginValidator>;

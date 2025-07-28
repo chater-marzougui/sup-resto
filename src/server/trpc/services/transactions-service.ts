@@ -67,7 +67,7 @@ export class TransactionService {
             userId: input.userId,
             type: input.type,
             amount: amount,
-            processedBy: input.processedBy,
+            processedBy: input.processedBy || input.userId,
             createdAt: new Date(),
           })
           .returning();

@@ -2,64 +2,21 @@ import { z } from 'zod';
 import { createTRPCRouter, publicProcedure, adminProcedure, protectedProcedure } from '@/server/trpc/trpc';
 import { UserService } from '@/server/trpc/services/user-service';
 import { TRPCError } from '@trpc/server';
-
-// Validation schemas
-const cinSchema = z.object({
-  cin: z.string().min(8, "CIN must be at least 8 characters").max(12, "CIN must be at most 12 characters"),
-});
-
-const userIdSchema = z.object({
-  id: z.string().min(1, "User ID is required"),
-});
-
-const emailSchema = z.object({
-  email: z.string().email("Invalid email format"),
-});
-
-const createUserSchema = z.object({
-  cin: z.string().min(8, "CIN must be at least 8 characters").max(12, "CIN must be at most 12 characters"),
-  firstName: z.string().min(2, "First name must be at least 2 characters").max(50, "First name must be at most 50 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters").max(50, "Last name must be at most 50 characters"),
-  email: z.string().email("Invalid email format").optional(),
-  role: z.number().int().min(1, "Role must be between 1 and 5").max(5, "Role must be between 1 and 5").default(5),
-  password: z.string().min(6, "Password must be at least 6 characters").max(128, "Password must be at most 128 characters"),
-  balance: z.number().int().min(0, "Balance cannot be negative").default(0),
-});
-
-const updateUserSchema = z.object({
-  id: z.string().min(1, "User ID is required"),
-  firstName: z.string().min(2, "First name must be at least 2 characters").max(50, "First name must be at most 50 characters").optional(),
-  lastName: z.string().min(2, "Last name must be at least 2 characters").max(50, "Last name must be at most 50 characters").optional(),
-  email: z.string().email("Invalid email format").optional(),
-  role: z.number().int().min(1, "Role must be between 1 and 5").max(5, "Role must be between 1 and 5").optional(),
-  balance: z.number().int().min(0, "Balance cannot be negative").optional(),
-  isActive: z.boolean().optional(),
-});
-
-const getUsersSchema = z.object({
-  // Filters
-  search: z.string().optional(),
-  role: z.number().int().min(1).max(5).optional(),
-  isActive: z.boolean().optional(),
-  
-  // Pagination
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(10),
-  sortBy: z.enum(['createdAt', 'firstName', 'lastName', 'lastLogin']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-});
-
-const updateBalanceSchema = z.object({
-  id: z.string().min(1, "User ID is required"),
-  balance: z.number().int().min(0, "Balance cannot be negative"),
-});
-
+import {
+  cinValidator,
+  userIdValidator,
+  emailValidator,
+  createUserValidator,
+  updateUserValidator,
+  userFiltersValidator,
+  userPaginationValidator,
+} from '../validators/user-validator';
 export const userRouter = createTRPCRouter({
   /**
    * Get user by CIN (admin only)
    */
   getByCin: adminProcedure
-    .input(cinSchema)
+    .input(cinValidator)
     .query(async ({ input }) => {
       try {
         const user = await UserService.getByCin(input.cin);
@@ -85,7 +42,7 @@ export const userRouter = createTRPCRouter({
    * Get user by ID (admin only)
    */
   getById: adminProcedure
-    .input(userIdSchema)
+    .input(userIdValidator)
     .query(async ({ input }) => {
       try {
         const user = await UserService.getById(input.id);
@@ -111,7 +68,7 @@ export const userRouter = createTRPCRouter({
    * Get user by email (admin only)
    */
   getByEmail: adminProcedure
-    .input(emailSchema)
+    .input(emailValidator)
     .query(async ({ input }) => {
       try {
         const user = await UserService.getByEmail(input.email);
@@ -137,7 +94,7 @@ export const userRouter = createTRPCRouter({
    * Create new user (admin only)
    */
   create: adminProcedure
-    .input(createUserSchema)
+    .input(createUserValidator)
     .mutation(async ({ input }) => {
       try {
         return await UserService.create(input);
@@ -156,11 +113,10 @@ export const userRouter = createTRPCRouter({
    * Update user (admin only)
    */
   update: adminProcedure
-    .input(updateUserSchema)
+    .input(updateUserValidator)
     .mutation(async ({ input }) => {
       try {
-        const { id, ...updateData } = input;
-        return await UserService.update(id, updateData);
+        return await UserService.update(input);
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
@@ -176,7 +132,7 @@ export const userRouter = createTRPCRouter({
    * Delete user (soft delete - admin only)
    */
   delete: adminProcedure
-    .input(userIdSchema)
+    .input(userIdValidator)
     .mutation(async ({ input }) => {
       try {
         await UserService.delete(input.id);
@@ -196,7 +152,7 @@ export const userRouter = createTRPCRouter({
    * Hard delete user (permanently remove - admin only)
    */
   hardDelete: adminProcedure
-    .input(userIdSchema)
+    .input(userIdValidator)
     .mutation(async ({ input }) => {
       try {
         await UserService.hardDelete(input.id);
@@ -216,14 +172,15 @@ export const userRouter = createTRPCRouter({
    * Get all users with pagination and filtering (admin only)
    */
   getAll: adminProcedure
-    .input(getUsersSchema)
+    .input(z.object({
+      filters: userFiltersValidator,
+      pagination: userPaginationValidator.optional(),
+    })
+    )
     .query(async ({ input }) => {
       try {
-        const { search, role, isActive, page, limit, sortBy, sortOrder } = input;
-        
-        const filters = { search, role, isActive };
-        const pagination = { page, limit, sortBy, sortOrder };
-        
+        const { filters, pagination } = input;
+
         return await UserService.getAll(filters, pagination);
       } catch (error) {
         if (error instanceof TRPCError) {
@@ -274,25 +231,6 @@ export const userRouter = createTRPCRouter({
     }),
 
   /**
-   * Update user balance (admin only)
-   */
-  updateBalance: adminProcedure
-    .input(updateBalanceSchema)
-    .mutation(async ({ input }) => {
-      try {
-        return await UserService.updateBalance(input.id, input.balance);
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update user balance',
-        });
-      }
-    }),
-
-  /**
    * Get current user profile (authenticated users)
    */
   getProfile: protectedProcedure
@@ -327,7 +265,7 @@ export const userRouter = createTRPCRouter({
         if(!ctx.user) {
           return;
         }
-        return await UserService.update(ctx.user.id, input);
+        return await UserService.update({ id: ctx.user.id, ...input });
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;

@@ -1,57 +1,55 @@
 import { z } from "zod";
 import { transactionTypeEnum } from "@/server/db/enums";
-import { get } from "http";
-import { getUserValidatorForTransaction } from "./user-validator";
-
-const amountValidator = z.number();
+import { baseUserValidator, getUserValidatorForTransaction } from "./user-validator";
+import { baseMealScheduleValidator } from "./meal-validator";
 
 export const baseTransactionValidator = z.object({
   id: z.string().min(1, "Transaction ID is required"),
-  userId: z.string().min(1, "User ID is required"),
+  userId: baseUserValidator.shape.id,
   type: z.enum(transactionTypeEnum.enumValues, "Invalid transaction type"),
-  amount: amountValidator,
-  processedBy: z.string().min(1, "Processor ID is required").optional().nullable(),
+  amount: z.number(),
+  processedBy: baseUserValidator.shape.id,
   createdAt: z.date(),
 });
 
 // Create transaction validator
 export const createTransactionValidator = z.object({
-  userId: z.string().min(1, "User ID is required"),
+  userId: baseUserValidator.shape.id,
   type: z.enum(transactionTypeEnum.enumValues),
-  amount: amountValidator,
-  processedBy: z.string().min(1, "Processor ID is required").optional(),
+  amount: baseTransactionValidator.shape.amount,
+  processedBy: baseUserValidator.shape.id.optional(),
 });
 
 // Bulk schedule validator for meal credits
 export const bulkScheduleValidator = z.object({
-  userId: z.string().min(1, "User ID is required"),
-  amount: amountValidator,
-  processedBy: z.string().min(1, "Processor ID is required"),
+  userId: baseUserValidator.shape.id,
+  amount: baseTransactionValidator.shape.amount,
+  processedBy: baseUserValidator.shape.id,
 });
 
 // Refund transaction validator
 export const refundTransactionValidator = z.object({
-  userId: z.string().min(1, "User ID is required"),
-  scheduledMealId: z.string().min(1, "Meal ID is required"),
-  amount: amountValidator,
-  processedBy: z.string().min(1, "Processor ID is required"),
+  userId: baseUserValidator.shape.id,
+  scheduledMealId: baseMealScheduleValidator.shape.id,
+  amount: baseTransactionValidator.shape.amount,
+  processedBy: baseUserValidator.shape.id,
 });
 
 // Balance adjustment validator (admin only)
 export const balanceAdjustmentValidator = z.object({
-  userId: z.string().min(1, "User ID is required"),
-  amount: amountValidator, // Can be positive or negative
+  userId: baseUserValidator.shape.id,
+  amount: baseTransactionValidator.shape.amount, // Can be positive or negative
   reason: z.string().min(1, "Adjustment reason is required"),
-  processedBy: z.string().min(1, "Processor ID is required"),
+  processedBy: baseUserValidator.shape.id,
 });
 
 // Transaction filters validator
 export const transactionFiltersValidator = z.object({
-  userId: z.string().optional(),
+  userId: baseUserValidator.shape.id.optional(),
   type: z.enum(transactionTypeEnum.enumValues).optional(),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
-  processedBy: z.string().optional(),
+  processedBy: baseUserValidator.shape.id.optional(),
   minAmount: z.number().optional(),
   maxAmount: z.number().optional(),
 });
@@ -85,7 +83,7 @@ export const paginatedTransactionsValidator = z.object({
 
 // User balance query validator
 export const userBalanceValidator = z.object({
-  userId: z.string().min(1, "User ID is required"),
+  userId: baseUserValidator.shape.id,
 });
 
 // Transaction statistics validator
@@ -99,22 +97,22 @@ export const transactionStatsValidator = z.object({
 export const bulkBalanceUpdateValidator = z.object({
   updates: z.array(
     z.object({
-      userId: z.string().min(1, "User ID is required"),
-      amount: z.number("Amount is required"),
+      userId: baseUserValidator.shape.id,
+      amount: baseTransactionValidator.shape.amount,
       reason: z.string().min(1, "Reason is required"),
     })
   ).min(1, "At least one balance update is required"),
-  processedBy: z.string().min(1, "Processor ID is required"),
+  processedBy: baseUserValidator.shape.id,
 });
 
 // Transaction ID validator
 export const transactionIdValidator = z.object({
-  transactionId: z.string().min(1, "Transaction ID is required"),
+  transactionId: baseTransactionValidator.shape.id,
 });
 
 // User transaction history validator
 export const userTransactionHistoryValidator = z.object({
-  userId: z.string().min(1, "User ID is required"),
+  userId: baseUserValidator.shape.id,
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
   type: z.enum(transactionTypeEnum.enumValues).optional(),

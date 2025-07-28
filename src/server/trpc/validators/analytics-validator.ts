@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { baseUserValidator } from "./user-validator";
 
 // Base time range validator
 export const timeRangeValidator = z.object({
@@ -8,7 +9,7 @@ export const timeRangeValidator = z.object({
 
 // User spending analytics validator
 export const userSpendingAnalyticsValidator = z.object({
-  userId: z.string().min(1, "User ID is required").optional(),
+  userId: baseUserValidator.shape.id.optional(),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   groupBy: z.enum(['day', 'week', 'month']).default('day'),
@@ -16,7 +17,7 @@ export const userSpendingAnalyticsValidator = z.object({
 
 // Meal pattern analytics validator
 export const mealPatternAnalyticsValidator = z.object({
-  userId: z.string().min(1, "User ID is required").optional(),
+  userId: baseUserValidator.shape.id.optional(),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   mealType: z.enum(['lunch', 'dinner']).optional(),
@@ -24,7 +25,7 @@ export const mealPatternAnalyticsValidator = z.object({
 
 // Balance history validator
 export const balanceHistoryValidator = z.object({
-  userId: z.string().min(1, "User ID is required").optional(),
+  userId: baseUserValidator.shape.id.optional(),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   limit: z.number().min(1).max(200).default(50),
@@ -32,14 +33,14 @@ export const balanceHistoryValidator = z.object({
 
 // Monthly spending validator
 export const monthlySpendingValidator = z.object({
-  userId: z.string().min(1, "User ID is required").optional(),  
+  userId: baseUserValidator.shape.id.optional(),  
   year: z.number().min(2020).max(2030).optional(),
   months: z.array(z.number().min(1).max(12)).optional(),
 });
 
 // Comparative analytics validator
 export const comparativeAnalyticsValidator = z.object({
-  userId: z.string().min(1, "User ID is required"),
+  userId: baseUserValidator.shape.id,
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   compareWithRole: z.number().min(0).max(5).optional(),
@@ -95,7 +96,7 @@ export const budgetTrackingValidator = z.object({
 
 // Meal efficiency validator
 export const mealEfficiencyValidator = z.object({
-  userId: z.string().min(1, "User ID is required").optional(),
+  userId: baseUserValidator.shape.id.optional(),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   includeComparisons: z.boolean().default(true),
@@ -134,7 +135,7 @@ export const wasteReductionAnalyticsValidator = z.object({
 
 // Financial health validator
 export const financialHealthValidator = z.object({
-  userId: z.string().min(1, "User ID is required").optional(),
+  userId: baseUserValidator.shape.id.optional(),
   includeProjections: z.boolean().default(true),
   alertsEnabled: z.boolean().default(true),
 });

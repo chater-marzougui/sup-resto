@@ -27,8 +27,12 @@ export const userRoleEnum = pgEnum(
 );
 
 export const mealTypeEnum = pgEnum('meal_time', ['lunch', 'dinner']);
-export const transactionTypeEnum = pgEnum('transaction_type', ['balance_recharge', 'meal_schedule', 'refund', 'meal_redemption', 'balance_adjustment']);
-export const scheduleStatusEnum = pgEnum('schedule_status', ['scheduled', 'refunded', 'cancelled', 'redeemed', 'expired']);
+export const transactionTypeEnum = pgEnum('transaction_type', ['balance_recharge' ,'meal_schedule', 'refund', 'meal_redemption', 'balance_adjustment']);
+export const scheduleStatusEnum = pgEnum('schedule_status', ['not_created', 'scheduled', 'refunded', 'cancelled', 'redeemed', 'expired']);
+
+export type TransactionType = typeof transactionTypeEnum.enumValues[number];
+export type MealType = typeof mealTypeEnum.enumValues[number];
+export type ScheduleStatusType = typeof scheduleStatusEnum.enumValues[number];
 */
 
 // Type definitions for JSON fields
@@ -43,7 +47,7 @@ export const users = pgTable('users', {
   cin: text('cin').unique().notNull(),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
-  email: text('email').unique(),
+  email: text('email').unique().notNull(),
   password: text('password').notNull(),
   role: integer('role').notNull().default(5), // Default to 'normalUser'
   balance: integer('balance').notNull().default(0),
@@ -63,6 +67,7 @@ export const mealSchedules = pgTable('meal_schedules', {
   mealTime: mealTypeEnum('meal_time').notNull(),
   scheduledDate: timestamp('scheduled_date').notNull(),
   status: scheduleStatusEnum('schedule_status').notNull().default('scheduled'),
+  mealCost: integer('meal_cost').notNull().default(0),
   statusHistory: jsonb('status_history').$type<StatusHistoryEntry[]>().default([]),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -79,7 +84,7 @@ export const transactions = pgTable('transactions', {
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   type: transactionTypeEnum('type').notNull(),
   amount: integer('amount').notNull(), // Changed to integer for numerical accuracy
-  processedBy: text('processed_by').references(() => users.id),
+  processedBy: text('processed_by').references(() => users.id).notNull(), // User who processed the transaction
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ([
   index('transactions_user_id_idx').on(table.userId),
