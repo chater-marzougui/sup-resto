@@ -20,10 +20,7 @@ import {
 import { TransactionService } from "./transactions-service";
 import { getDayMonthYear } from "@/lib/utils/main-utils";
 import { cancelOrRefundMeal } from "@/lib/utils/meal-utils";
-import logger from "@/config/logger";
-import { User } from "lucide-react";
 import { UserService } from "./user-service";
-import { UserWithoutPassword } from "../validators/user-validator";
 
 // Types
 export type MealScheduleWithUser = {
@@ -206,7 +203,10 @@ export class MealService {
     if (affordableMeals < totalCost) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "Insufficient balance for all meals, you can only afford " + Math.floor(affordableMeals / MEAL_COST) + " meals.",
+        message:
+          "Insufficient balance for all meals, you can only afford " +
+          Math.floor(affordableMeals / MEAL_COST) +
+          " meals.",
       });
     }
 
@@ -328,8 +328,6 @@ export class MealService {
       }),
     ]);
 
-    console.log("Meal scheduling results:", results);
-
     // Extract the new meals from the first result
     const newMeals: string[] = [];
     if (results[0]) {
@@ -393,10 +391,6 @@ export class MealService {
       status: status,
     });
 
-    logger.info(
-      `TimeStamp: ${new Date().toISOString()} Cancelled meal ${mealId} with status ${status} for user ${userId}`
-    );
-
     return await this.getMealById(mealId);
   }
 
@@ -432,10 +426,6 @@ export class MealService {
         )
       );
 
-    logger.info(
-      `TimeStamp: ${new Date().toISOString()} Cancelling multiple meals for user ${userId}`
-    );
-
     if (mealsFromDb.length === 0) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -443,11 +433,6 @@ export class MealService {
       });
     }
 
-    logger.info(
-      `TimeStamp: ${new Date().toISOString()} Meals to cancel: ${JSON.stringify(
-        mealsFromDb
-      )}`
-    );
     const meals = mealsFromDb.filter((meal) => meal.status === "scheduled");
 
     let totalRefundCost = 0;
@@ -496,9 +481,6 @@ export class MealService {
           )
         : Promise.resolve([]),
     ]);
-    logger.info(
-      `TimeStamp: ${new Date().toISOString()} Cancelled multiple meals for user ${userId}`
-    );
 
     return meals;
   }
@@ -725,7 +707,6 @@ export class MealService {
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Set to Monday
-    console.log("Start of week:", startOfWeek);
     startOfWeek.setHours(1, 0, 0, 0);
 
     const endOfWeek = new Date(startOfWeek);

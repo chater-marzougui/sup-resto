@@ -16,8 +16,6 @@ export class AuthService {
    */
   static async login(input: LoginInput): Promise<{ user: UserWithoutPassword; token: string }> {
     const { cin, password } = input;
-    console.log("Attempting to login with CIN:", cin);
-
     // Find user by CIN
     const user = await db.select().from(users).where(eq(users.cin, cin)).limit(1);
 

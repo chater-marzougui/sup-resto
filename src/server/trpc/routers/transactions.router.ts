@@ -250,7 +250,6 @@ export const transactionRouter = createTRPCRouter({
           message: 'Only staff members can view all transactions',
         });
       }
-      console.log("Fetching all transactions with filters:", input);
 
       try {
         return await TransactionService.getAllTransactions(input);

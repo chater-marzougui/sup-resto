@@ -24,7 +24,6 @@ export function LoginForm() {
     });
 
     const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-        console.log("Form submitted with values:", values);
         await login(values.cin, values.password);
     };
 

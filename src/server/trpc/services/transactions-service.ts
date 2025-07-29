@@ -38,19 +38,10 @@ export class TransactionService {
         const currentBalance = user.balance;
         let newBalance = currentBalance;
         let amount = Math.floor(input.amount);
-        console.log("Processing transaction:", {
-          userId: input.userId,
-          type: input.type,
-          amount,
-          processedBy: input.processedBy,
-        });
         
         if(input.type === 'meal_schedule') {
-          console.log("Meal schedule transaction detected");
           amount = - Math.floor(input.amount);
           newBalance = currentBalance + amount;
-          console.log("New balance after meal schedule:", newBalance);
-          console.log("Meal cost:", amount);
         } else if (input.type === 'balance_adjustment') {
           const adjustment = amount - currentBalance;
           newBalance = amount;
