@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { mealSchedules, users } from "@/server/db/schema";
+import { mealSchedules } from "@/server/db/schema";
 import { eq, and, or, gte, lte, desc, asc, sql, count } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import {
@@ -15,10 +15,15 @@ import {
   transactionTypeEnum,
   ScheduleStatusType,
   MealType,
+  RoleEnum,
 } from "@/server/db/enums";
 import { TransactionService } from "./transactions-service";
 import { getDayMonthYear } from "@/lib/utils/main-utils";
 import { cancelOrRefundMeal } from "@/lib/utils/meal-utils";
+import logger from "@/config/logger";
+import { User } from "lucide-react";
+import { UserService } from "./user-service";
+import { UserWithoutPassword } from "../validators/user-validator";
 
 // Types
 export type MealScheduleWithUser = {
@@ -63,12 +68,10 @@ export class MealService {
   static async scheduleMeal(
     input: MealScheduleInput
   ): Promise<MealScheduleWithUser> {
-    const { userId, mealTime, scheduledDate } = input;
+    const { userId, mealTime, scheduledDate, isTeacherDiscount } = input;
 
     // Check if user exists and has sufficient balance
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-    });
+    const user = await UserService.getById(userId);
 
     if (!user || !user.isActive) {
       throw new TRPCError({
@@ -77,7 +80,9 @@ export class MealService {
       });
     }
 
-    const MEAL_COST = MealCosts[user.role] || 200; // Default cost if role not found
+    const MEAL_COST = isTeacherDiscount
+      ? MealCosts[RoleEnum.student]
+      : MealCosts[user.role];
     const MaxMealsInRed = maxMealsInRed[user.role] || 3; // Default max meals if role not found
     if (user.balance < MEAL_COST - MaxMealsInRed * MEAL_COST) {
       throw new TRPCError({
@@ -94,8 +99,7 @@ export class MealService {
         and(
           eq(mealSchedules.userId, userId),
           eq(mealSchedules.scheduledDate, new Date(scheduledDate)),
-          eq(mealSchedules.mealTime, mealTime),
-          eq(mealSchedules.status, "scheduled")
+          eq(mealSchedules.mealTime, mealTime)
         )
       )
       .limit(1);
@@ -113,6 +117,7 @@ export class MealService {
       this.updateMealStatus({
         mealId: existingMeal.id,
         status: "scheduled",
+        mealCost: MEAL_COST,
       });
       Meal = existingMeal;
     } else {
@@ -130,26 +135,34 @@ export class MealService {
         )
       );
 
-      // Schedule the meal
-      const newMeal = await db
-        .insert(mealSchedules)
-        .values({
-          userId,
-          mealTime,
-          scheduledDate: scheduledDateTime,
-          status: "scheduled",
-          statusHistory,
-        })
-        .returning();
+      try {
+        const [newMeal] = await db
+          .insert(mealSchedules)
+          .values({
+            userId,
+            mealTime,
+            mealCost: MEAL_COST,
+            scheduledDate: scheduledDateTime,
+            status: "scheduled",
+            statusHistory,
+          })
+          .returning();
 
-      if (!newMeal.length) {
+        if (!newMeal) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to schedule meal",
+          });
+        }
+
+        Meal = newMeal;
+      } catch (error) {
+        console.error("Error scheduling meal:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to schedule meal",
+          message: "Failed to schedule meal, error: " + error,
         });
       }
-
-      Meal = newMeal[0];
     }
 
     // Record transaction
@@ -170,38 +183,35 @@ export class MealService {
   static async scheduleManyMeals(
     input: ScheduleManyMealsInput
   ): Promise<string[]> {
-    const { meals, userId } = input;
+    const { meals, userId, isTeacherDiscount } = input;
 
     // Check user existence and balance
-    const user = await db
-      .select({
-        id: users.id,
-        balance: users.balance,
-        isActive: users.isActive,
-        role: users.role,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+    const user = await UserService.getById(userId);
 
-    if (!user.length || !user[0].isActive) {
+    if (!user || !user.isActive) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "User not found or inactive",
       });
     }
-    const MEAL_COST = MealCosts[user[0].role] || 200; // Default cost if role not found
-    const MaxMealsInRed = maxMealsInRed[user[0].role] || 3;
-    const totalCost = meals.length * MEAL_COST;
 
-    if (user[0].balance < totalCost - MaxMealsInRed * MEAL_COST) {
+    const MEAL_COST = isTeacherDiscount
+      ? MealCosts[RoleEnum.student]
+      : MealCosts[user.role];
+
+    const MaxMealsInRed = maxMealsInRed[user.role] || 3;
+    const totalCost = meals.length * MEAL_COST;
+    const affordableMeals = user.balance + MaxMealsInRed * MEAL_COST;
+
+    if (affordableMeals < totalCost) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "Insufficient balance for all meals",
+        message: "Insufficient balance for all meals, you can only afford " + Math.floor(affordableMeals / MEAL_COST) + " meals.",
       });
     }
 
     // Check for duplicate bookings
+
     const existingMeals = await db
       .select()
       .from(mealSchedules)
@@ -219,7 +229,10 @@ export class MealService {
         )
       );
 
-    if (existingMeals.length === meals.length && existingMeals.every(meal => meal.status === "scheduled")) {
+    if (
+      existingMeals.length === meals.length &&
+      existingMeals.every((meal) => meal.status === "scheduled")
+    ) {
       throw new TRPCError({
         code: "CONFLICT",
         message: "All meals are already scheduled",
@@ -261,6 +274,7 @@ export class MealService {
         mealTime: meal.mealTime,
         scheduledDate: meal.scheduledDate,
         status: "scheduled",
+        mealCost: MEAL_COST,
         statusHistory: meal.statusHistory
           ? [...meal.statusHistory, ...statusHistory]
           : statusHistory,
@@ -279,6 +293,7 @@ export class MealService {
       return {
         userId,
         mealTime: meal.mealType,
+        mealCost: MEAL_COST,
         scheduledDate: scheduledDateTime,
         status: "scheduled" as const,
         statusHistory,
@@ -287,7 +302,8 @@ export class MealService {
 
     // Execute all operations
     const results = await Promise.all([
-      mealData.length > 0 && db.insert(mealSchedules).values(mealData).returning(),
+      mealData.length > 0 &&
+        db.insert(mealSchedules).values(mealData).returning(),
 
       mealUpdates.length > 0
         ? Promise.all(
@@ -328,10 +344,11 @@ export class MealService {
   /**
    * Cancel a meal
    */
-  static async cancelMeal(
-    userId: string,
-    mealId: string,
-  ): Promise<MealScheduleWithUser> {
+  static async cancelMeal(input: {
+    mealId: string;
+    userId: string;
+  }): Promise<MealScheduleWithUser> {
+    const { mealId, userId } = input;
     const meal = await db
       .select()
       .from(mealSchedules)
@@ -347,7 +364,7 @@ export class MealService {
       });
     }
 
-    if (meal[0].status === "cancelled") {
+    if (meal[0].status === "cancelled" || meal[0].status === "refunded") {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "Meal is already cancelled",
@@ -361,19 +378,12 @@ export class MealService {
       });
     }
 
-    const userRole = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    const MEAL_COST = MealCosts[userRole[0].role] || 200;
-
     const status = cancelOrRefundMeal(meal[0]);
 
     await TransactionService.createTransaction({
       userId,
       type: transactionTypeEnum.enumValues[2], // Refund
-      amount: status === "refunded" ? MEAL_COST : 0,
+      amount: status === "refunded" ? meal[0].mealCost : 0,
       processedBy: userId,
     });
 
@@ -382,6 +392,10 @@ export class MealService {
       mealId: meal[0].id,
       status: status,
     });
+
+    logger.info(
+      `TimeStamp: ${new Date().toISOString()} Cancelled meal ${mealId} with status ${status} for user ${userId}`
+    );
 
     return await this.getMealById(mealId);
   }
@@ -401,7 +415,7 @@ export class MealService {
       });
     }
 
-    const meals = await db
+    const mealsFromDb = await db
       .select()
       .from(mealSchedules)
       .where(
@@ -411,28 +425,36 @@ export class MealService {
             ...mealData.map((meal) =>
               and(
                 eq(mealSchedules.scheduledDate, new Date(meal.mealDate)),
-                eq(mealSchedules.mealTime, meal.mealType),
-                eq(mealSchedules.status, "scheduled")
+                eq(mealSchedules.mealTime, meal.mealType)
               )
             )
           )
         )
       );
 
-    if (meals.length === 0) {
+    logger.info(
+      `TimeStamp: ${new Date().toISOString()} Cancelling multiple meals for user ${userId}`
+    );
+
+    if (mealsFromDb.length === 0) {
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "No meals found",
       });
     }
 
-    console.log("Meals to cancel:", meals);
+    logger.info(
+      `TimeStamp: ${new Date().toISOString()} Meals to cancel: ${JSON.stringify(
+        mealsFromDb
+      )}`
+    );
+    const meals = mealsFromDb.filter((meal) => meal.status === "scheduled");
 
-    let numberOfMealsToRefund = 0;
+    let totalRefundCost = 0;
     for (const meal of meals) {
       if (cancelOrRefundMeal(meal) === "refunded") {
         meals[meals.indexOf(meal)].status = "refunded";
-        numberOfMealsToRefund++;
+        totalRefundCost += meal.mealCost;
       } else {
         meals[meals.indexOf(meal)].status = "cancelled";
       }
@@ -451,24 +473,11 @@ export class MealService {
       meal.updatedAt = new Date();
     });
 
-    const userRole = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    const MEAL_COST = MealCosts[userRole[0].role] || 200;
-
-    console.log("Refunding meals:", numberOfMealsToRefund, "for user:", userId);
-    console.log("Meal costs:", MEAL_COST);
-    console.log("Total refund amount:", numberOfMealsToRefund * MEAL_COST);
-    console.log("Meals to update:", meals);
-
     await Promise.all([
       TransactionService.createTransaction({
         userId,
         type: transactionTypeEnum.enumValues[2], // Refund
-        amount: numberOfMealsToRefund * MEAL_COST,
+        amount: totalRefundCost,
         processedBy: userId,
       }),
 
@@ -487,6 +496,9 @@ export class MealService {
           )
         : Promise.resolve([]),
     ]);
+    logger.info(
+      `TimeStamp: ${new Date().toISOString()} Cancelled multiple meals for user ${userId}`
+    );
 
     return meals;
   }
@@ -497,7 +509,7 @@ export class MealService {
   static async updateMealStatus(
     input: UpdateMealStatusInput
   ): Promise<MealScheduleWithUser> {
-    const { mealId, status } = input;
+    const { mealId, status, mealCost } = input;
 
     const meal = await db
       .select()
@@ -523,6 +535,7 @@ export class MealService {
         status,
         statusHistory: meal[0].statusHistory,
         updatedAt: new Date(),
+        mealCost: mealCost || meal[0].mealCost,
       })
       .where(eq(mealSchedules.id, mealId));
 
@@ -647,11 +660,11 @@ export class MealService {
       offset,
     });
 
-    // Total count query
     const countResult = await db
-      .select({ count: count() })
+      .select({
+        count: count(),
+      })
       .from(mealSchedules)
-      .innerJoin(users, eq(mealSchedules.userId, users.id))
       .where(whereClause);
 
     const totalCount = Number(countResult[0]?.count ?? 0);

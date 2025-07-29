@@ -50,6 +50,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
         mealTime: MealType;
         scheduledDate: Date;
         status: ScheduleStatusType;
+        mealCost: number;
         statusHistory: StatusHistoryEntry[];
     }[] = [
         // Today's meals (some redeemed)
@@ -58,6 +59,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(today, "lunch"),
             status: "redeemed",
+            mealCost: 200,
             statusHistory: statusHistoryRedeemed,
         },
         {
@@ -65,6 +67,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "dinner",
             scheduledDate: formatDate(today, "dinner"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -72,6 +75,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(today, "lunch"),
             status: "redeemed",
+            mealCost: 200,
             statusHistory: statusHistoryRedeemed,
         },
         {
@@ -79,6 +83,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(today, "lunch"),
             status: "scheduled",
+            mealCost: 2000,
             statusHistory: statusHistoryScheduled,
         },
         
@@ -88,6 +93,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(tomorrow, "lunch"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -95,6 +101,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "dinner",
             scheduledDate: formatDate(tomorrow, "dinner"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -102,6 +109,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(tomorrow, "lunch"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -109,6 +117,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "dinner",
             scheduledDate: formatDate(tomorrow, "dinner"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -116,6 +125,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(tomorrow, "lunch"),
             status: "cancelled",
+            mealCost: 200,
             statusHistory: [
             {
                 status: "scheduled",
@@ -132,6 +142,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "dinner",
             scheduledDate: formatDate(tomorrow, "dinner"),
             status: "scheduled",
+            mealCost: 2000,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -139,6 +150,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(tomorrow, "lunch"),
             status: "scheduled",
+            mealCost: 2000,
             statusHistory: statusHistoryScheduled,
         },
         
@@ -148,6 +160,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(dayAfterTomorrow, "lunch"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -155,6 +168,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "dinner",
             scheduledDate: formatDate(dayAfterTomorrow, "dinner"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         {
@@ -162,6 +176,7 @@ export async function getFakeElements(seedUsers: seedUsers) {
             mealTime: "lunch",
             scheduledDate: formatDate(dayAfterTomorrow, "lunch"),
             status: "scheduled",
+            mealCost: 200,
             statusHistory: statusHistoryScheduled,
         },
         ];

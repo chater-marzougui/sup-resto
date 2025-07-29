@@ -27,6 +27,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/use-auth";
 import LoadingSpinner from "@/components/elements/LoadingSpinner";
+import { getDayMonthNumber } from "@/lib/utils/main-utils";
 
 type ActionType = "schedule" | "cancel";
 type MealSelection = {
@@ -40,6 +41,7 @@ interface ScheduleMealDialogProps {
   onScheduleMeals?: (
     isSuccess: boolean,
   ) => void;
+  eatWithStudents?: boolean;
 }
 
 const weekdayToday = new Date().getDay() === 0 ? 0 : new Date().getDay() - 1;
@@ -166,7 +168,7 @@ const DayMealsSelection: React.FC<{
   onMealToggle: (day: string, mealDate: Date, mealType: MealType) => void;
 }> = ({ day, dayData, selectedMeals, selectedAction, onMealToggle }) => {
   // Don't render if no data or day is in the past
-  if (!dayData || dayData.lunch.scheduledDate < new Date()) {
+  if (!dayData || getDayMonthNumber(dayData.lunch.scheduledDate) < getDayMonthNumber(new Date())) {
     return null;
   }
 
@@ -246,6 +248,7 @@ const DayMealsSelection: React.FC<{
 export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
   weeklyMeals,
   onScheduleMeals,
+  eatWithStudents = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMeals, setSelectedMeals] = useState<MealSelection[]>([]);
@@ -254,25 +257,25 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
   
   const utils = trpc.useUtils();
   const scheduleManyMealsMutation = trpc.meal.scheduleManyMeals.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Meals scheduled successfully");
       setSelectedMeals([]);
-      utils.invalidate();
+      await utils.invalidate();
       setIsOpen(false);
       onScheduleMeals?.(true);
     },
     onError: (error) => {
-      toast.error("Failed to schedule meals");
+      toast.error("Failed to schedule meals", { description: error.message });
       console.error("Error scheduling meals:", error);
       onScheduleMeals?.(false);
     },
   });
 
   const cancelManyMealsMutation = trpc.meal.cancelManyMeals.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Meals cancelled successfully");
       setSelectedMeals([]);
-      utils.invalidate();
+      await utils.invalidate();
       setIsOpen(false);
       onScheduleMeals?.(true);
     },
@@ -341,7 +344,8 @@ export const ScheduleMealDialog: React.FC<ScheduleMealDialogProps> = ({
           mealType: meal.mealType,
           mealDate: new Date(meal.mealDate),
         })),
-        userId: user?.id!, // Assuming you have a way to get the current user ID
+        userId: user?.id!,
+        isTeacherDiscount: eatWithStudents,
       });
     } else if (selectedAction === "cancel") {
       // Cancel meals

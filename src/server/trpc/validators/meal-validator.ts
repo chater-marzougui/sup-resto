@@ -8,7 +8,7 @@ export const baseMealScheduleValidator = z.object({
   mealTime: z.enum(mealTypeEnum.enumValues, "Invalid meal time"),
   scheduledDate: z.date("Invalid date format"),
   status: z.enum(scheduleStatusEnum.enumValues, "Invalid schedule status"),
-  mealCost: z.number().int().min(0, "Meal cost must be a non-negative integer").default(0),
+  mealCost: z.number().int().min(0, "Meal cost must be a non-negative integer"),
   statusHistory: z.array(z.object({
     status: z.enum(scheduleStatusEnum.enumValues, "Invalid status in history"),
     timestamp: z.date("Invalid timestamp format"),
@@ -18,10 +18,11 @@ export const baseMealScheduleValidator = z.object({
 });
 
 // Meal schedule input validator
-export const mealScheduleInputValidator = baseMealScheduleValidator.pick({
-  userId: true,
-  mealTime: true,
-  scheduledDate: true,
+export const mealScheduleInputValidator = z.object({
+  userId: baseUserValidator.shape.id,
+  mealTime: baseMealScheduleValidator.shape.mealTime,
+  scheduledDate: baseMealScheduleValidator.shape.scheduledDate,
+  isTeacherDiscount: z.boolean().default(false),
 });
 
 // Multiple meals scheduling validator
@@ -33,18 +34,20 @@ export const scheduleManyMealsValidator = z.object({
     })
   ).min(1, "At least one meal must be provided"),
   userId: baseUserValidator.shape.id,
+  isTeacherDiscount: z.boolean().default(false),
 });
 
 // Meal cancellation validator
-export const cancelMealValidator = baseMealScheduleValidator.pick({
-  userId: true,
-  id: true,
+export const cancelMealValidator = z.object({
+  mealId: baseMealScheduleValidator.shape.id,
+  userId: baseUserValidator.shape.id,
 });
 
 // Update meal status validator
 export const updateMealStatusValidator = z.object({
   mealId: baseMealScheduleValidator.shape.id,
   status: baseMealScheduleValidator.shape.status,
+  mealCost: z.number().int().min(0, "Meal cost must be a non-negative integer").optional(),
 });
 
 // Date range validator for meal queries

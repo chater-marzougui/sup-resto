@@ -22,7 +22,6 @@ export class TransactionService {
    */
   static async createTransaction(input: CreateTransactionInput) {
     return await db.transaction(async (tx) => {
-      console.log("Creating transaction:", input);
       try {
         const user = await tx.query.users.findFirst({
             where: eq(users.id, input.userId),

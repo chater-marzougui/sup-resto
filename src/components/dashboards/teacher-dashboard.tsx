@@ -50,8 +50,24 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
     isToday: false,
   });
   const weeklyMeals = trpc.meal.getWeekMeals.useQuery({ userId: user?.id });
-  const cancelMeal = trpc.meal.cancelMeal.useMutation();
-  const scheduleMeal = trpc.meal.scheduleMeal.useMutation();
+  const cancelMeal = trpc.meal.cancelMeal.useMutation({
+    onSuccess: () => {
+      utils.invalidate();
+      toast.success("Meal cancelled successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to cancel meal", { description: error.message });
+    },
+  });
+  const scheduleMeal = trpc.meal.scheduleMeal.useMutation({
+    onSuccess: () => {
+      utils.invalidate();
+      toast.success("Meal scheduled successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to schedule meal", { description: error.message });
+    },
+  });
   const monthlyStats = trpc.analytics.getMonthlySpending.useQuery({
     userId: user?.id,
   });
@@ -77,48 +93,25 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
       scheduledDate.setHours(...mealTimeEnum[1]);
     }
 
-    try {
-      await scheduleMeal.mutateAsync({
-        userId: user.id,
-        mealTime: mealTime,
-        scheduledDate: scheduledDate,
-      });
-      utils.invalidate();
-      toast.success("Meal scheduled successfully");
-    } catch (error) {
-      console.error("Error scheduling meal:", error);
-    }
+    await scheduleMeal.mutateAsync({
+      userId: user.id,
+      mealTime: mealTime,
+      scheduledDate: scheduledDate,
+      isTeacherDiscount: eatWithStudents,
+    });
   };
 
   const handleCancelMeal = async (mealId: string) => {
-    try {
-      await cancelMeal.mutateAsync({
-        userId: user.id,
-        mealId: mealId,
-      });
-      utils.invalidate();
-      toast.success("Meal cancelled successfully");
-    } catch (error) {
-      console.error("Error cancelling meal:", error);
-    }
+    await cancelMeal.mutateAsync({
+      userId: user.id,
+      mealId: mealId,
+    });
   };
 
   return (
     <DashboardLayout
       title="Teacher Dashboard"
       subtitle={`Welcome back, ${user.firstName}!`}
-      actions={
-        <>
-          <Button variant="outline" className="flex items-center space-x-2">
-            <History className="h-4 w-4" />
-            <span>History</span>
-          </Button>
-          <Button variant="outline" className="flex items-center space-x-2">
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </Button>
-        </>
-      }
     >
       <div className="space-y-6">
         {/* Low Balance Alert */}
@@ -144,12 +137,12 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
                 </p>
                 <p className="text-sm text-gray-600">
                   {eatWithStudents
-                    ? `${MealCosts[RoleEnum.student].toFixed(
-                        2
-                      )} TND per meal (eating with students)`
-                    : `${MealCosts[RoleEnum.teacher].toFixed(
-                        2
-                      )} TND per meal (regular teacher pricing)`}
+                    ? `${formatCurrency(
+                        MealCosts[RoleEnum.student]
+                      )} per meal (eating with students)`
+                    : `${formatCurrency(
+                        MealCosts[RoleEnum.teacher]
+                      )} per meal (regular teacher pricing)`}
                 </p>
               </div>
               <Button
@@ -184,7 +177,7 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
             icon={CreditCard}
             iconColor="text-blue-500"
             description={`≈ ${Math.floor(
-              user?.balance > 0 ? user?.balance : 0 / currentMealPrice
+              user?.balance > 0 ? user?.balance / currentMealPrice : 0 
             )} meals at current rate`}
           />
 
@@ -205,14 +198,6 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
             iconColor="text-yellow-500"
             description="January 2024"
           />
-
-          <StatCard
-            title="QR Ready"
-            value="Active"
-            icon={QrCode}
-            iconColor="text-purple-500"
-            description="Scan to enter"
-          />
         </div>
 
         {/* Main Content Grid */}
@@ -220,6 +205,8 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
           <div className="flex flex-wrap items-center gap-6 w-full justify-between">
             <DayMealsCard
               userId={user.id}
+              isLoading={todayMeals.isLoading}
+              isPending={cancelMeal.isPending || scheduleMeal.isPending}
               isToday={true}
               meals={todayMeals.data || []}
               onScheduleMeal={handleScheduleMeal}
@@ -227,6 +214,8 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
             />
             <DayMealsCard
               userId={user.id}
+              isLoading={tomorrowMeals.isLoading}
+              isPending={cancelMeal.isPending || scheduleMeal.isPending}
               isToday={false}
               meals={tomorrowMeals.data || []}
               onScheduleMeal={handleScheduleMeal}
@@ -249,7 +238,7 @@ const TeacherDashboardComponent: React.FC<TeacherDashboardProps> = () => {
 
           {/* Right Column - Weekly Calendar */}
           <div className="lg:col-span-2">
-            <WeeklyMealCalendar meals={weeklyMeals.data || []} />
+            <WeeklyMealCalendar meals={weeklyMeals.data || []} eatWithStudents={eatWithStudents} />
           </div>
         </div>
 

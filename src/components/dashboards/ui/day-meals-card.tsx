@@ -8,11 +8,13 @@ import { Clock, Plus, X } from 'lucide-react';
 import { MealType } from '@/server/db/enums';
 import { MealScheduleWithUser } from '@/server/trpc/services/meal-service';
 import { canScheduleMeal, canCancelMeal, formatMeals } from '@/lib/utils/meal-utils';
+import LoadingSpinner from '@/components/elements/LoadingSpinner';
 
 interface DayMealsCardProps {
   meals: MealScheduleWithUser[];
   isToday: boolean;
   isLoading?: boolean;
+  isPending?: boolean;
   userId: string;
   onScheduleMeal?: (mealTime: MealType, scheduledDate: Date) => void;
   onCancelMeal?: (mealId: string) => void;
@@ -36,6 +38,7 @@ export const DayMealsCard: React.FC<DayMealsCardProps> = ({
   meals,
   isToday,
   isLoading = false,
+  isPending = false,
   userId,
   onScheduleMeal,
   onCancelMeal
@@ -118,10 +121,12 @@ export const DayMealsCard: React.FC<DayMealsCardProps> = ({
                     <Button
                       size="sm"
                       onClick={() => onScheduleMeal?.(meal.mealTime, scheduleDate)}
+                      disabled={isPending}
+                      aria-disabled={isPending}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      {displayWordForSchedule(meal.status)}
+                      {isPending ? <LoadingSpinner /> : displayWordForSchedule(meal.status)}
                     </Button>
                   )}
                   {canCancelMeal(meal) && meal.id && (
@@ -129,10 +134,11 @@ export const DayMealsCard: React.FC<DayMealsCardProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => onCancelMeal?.(meal.id!)}
+                      disabled={isPending}
                       className="border-red-300 text-red-600 hover:bg-red-50"
                     >
                       <X className="h-4 w-4 mr-1" />
-                      Cancel
+                      {isPending ? <LoadingSpinner /> : "Cancel"}
                     </Button>
                   )}
                 </div>

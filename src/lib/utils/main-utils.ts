@@ -57,3 +57,9 @@ export const getDayMonthYear = (date: Date): string => {
   const year = date.getFullYear();
   return `${day}-${month}-${year}`;
 };
+
+export const getDayMonthNumber = (date: Date): number => {
+  const day = date.getDate();
+  const month = date.getMonth() + 1; // Months are 0-indexed
+  return day + month * 100;
+};

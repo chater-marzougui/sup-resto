@@ -112,7 +112,7 @@ export const mealRouter = createTRPCRouter({
     .input(cancelMealValidator)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await MealService.cancelMeal(input.userId, input.id);
+        return await MealService.cancelMeal(input);
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;

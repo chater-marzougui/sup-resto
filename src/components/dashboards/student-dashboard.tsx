@@ -2,7 +2,6 @@
 
 import React from "react";
 import { CreditCard, Calendar, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { withDashboardLayout } from "./withDashboardLayout";
 import { DashboardLayout } from "../layouts/dashboardLayout";
 import { MealType, RoleEnum } from "@/server/db/enums";
@@ -24,6 +23,7 @@ interface StudentDashboardProps {}
 
 const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
   const { user, isLoadingUser } = useProfile();
+  const utils = trpc.useUtils();
 
   const todayMeals = trpc.meal.getDayMeals.useQuery({
     userId: user?.id,
@@ -34,13 +34,27 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
     isToday: false,
   });
   const weeklyMeals = trpc.meal.getWeekMeals.useQuery({ userId: user?.id });
-  const cancelMeal = trpc.meal.cancelMeal.useMutation();
-  const scheduleMeal = trpc.meal.scheduleMeal.useMutation();
+  const cancelMeal = trpc.meal.cancelMeal.useMutation({
+    onSuccess: async () => {
+      await utils.invalidate();
+      toast.success("Meal cancelled successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to cancel meal", { description: error.message });
+    },
+  });
+  const scheduleMeal = trpc.meal.scheduleMeal.useMutation({
+    onSuccess: async () => {
+      await utils.invalidate();
+      toast.success("Meal scheduled successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to schedule meal", { description: error.message });
+    },
+  });
   const monthlyStats = trpc.analytics.getMonthlySpending.useQuery({
     userId: user?.id,
   });
-
-  const utils = trpc.useUtils();
 
   if (isLoadingUser) {
     return <LoadingSpinner />;
@@ -63,44 +77,24 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
       scheduledDate.setHours(...mealTimeEnum[1]);
     }
 
-    try {
-      await scheduleMeal.mutateAsync({
-        userId: user.id,
-        mealTime: mealTime,
-        scheduledDate: scheduledDate,
-      });
-      utils.invalidate();
-      toast.success("Meal scheduled successfully");
-    } catch (error) {
-      console.error("Error scheduling meal:", error);
-    }
+    await scheduleMeal.mutateAsync({
+      userId: user.id,
+      mealTime: mealTime,
+      scheduledDate: scheduledDate,
+    });
   };
 
   const handleCancelMeal = async (mealId: string) => {
-    try {
-      await cancelMeal.mutateAsync({
-        userId: user.id,
-        mealId: mealId,
-      });
-      utils.invalidate();
-      toast.success("Meal cancelled successfully");
-    } catch (error) {
-      console.error("Error cancelling meal:", error);
-    }
+    await cancelMeal.mutateAsync({
+      mealId: mealId,
+      userId: user.id,
+    });
   };
 
   return (
     <DashboardLayout
       title="Student Dashboard"
       subtitle={`Welcome back, ${user?.firstName}!`}
-      actions={
-        <>
-          <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center space-x-2">
-            <Calendar className="h-4 w-4" />
-            <span>Schedule Meals</span>
-          </Button>
-        </>
-      }
     >
       <div className="space-y-6">
         {/* Low Balance Alert */}
@@ -113,7 +107,7 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
             value={`${formatCurrency(user?.balance)}`}
             icon={CreditCard}
             iconColor="text-blue-500"
-            description={`≈ ${Math.floor(user?.balance / mealPrice)} meals`}
+            description={`≈ ${Math.floor(user?.balance > 0 ? user?.balance / mealPrice : 0)} meals`}
           />
 
           <StatCard
@@ -142,6 +136,8 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
               userId={user?.id}
               isToday={true}
               meals={todayMeals.data || []}
+              isLoading={todayMeals.isLoading}
+              isPending={cancelMeal.isPending || scheduleMeal.isPending || todayMeals.isPending}
               onScheduleMeal={handleScheduleMeal}
               onCancelMeal={handleCancelMeal}
             />
@@ -149,6 +145,8 @@ const StudentDashboardComponent: React.FC<StudentDashboardProps> = () => {
             <DayMealsCard
               userId={user?.id}
               isToday={false}
+              isLoading={tomorrowMeals.isLoading}
+              isPending={cancelMeal.isPending || scheduleMeal.isPending || tomorrowMeals.isPending}
               meals={tomorrowMeals.data || []}
               onScheduleMeal={handleScheduleMeal}
               onCancelMeal={handleCancelMeal}

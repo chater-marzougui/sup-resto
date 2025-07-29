@@ -15,6 +15,7 @@ interface WeeklyMealCalendarProps {
   meals: MealScheduleWithUser[];
   isLoading?: boolean;
   onScheduleMeals?: (isSuccess: boolean) => void;
+  eatWithStudents?: boolean;
 }
 
 const DayElement = ({ data }: { data?: dayMealData }): React.JSX.Element => {
@@ -57,6 +58,7 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
   meals,
   isLoading = false,
   onScheduleMeals,
+  eatWithStudents = false,
 }) => {
   if (isLoading) {
     return (
@@ -97,6 +99,7 @@ export const WeeklyMealCalendar: React.FC<WeeklyMealCalendarProps> = ({
           <ScheduleMealDialog
             weeklyMeals={weeklyMeals}
             onScheduleMeals={onScheduleMeals}
+            eatWithStudents={eatWithStudents}
           />
         </div>
       </CardHeader>
