@@ -3,13 +3,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
-import { TransactionWithProcessedBy } from "@/server/trpc/validators/transactions-validator";
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TransactionWithProcessedBy, TransactionWithUser } from "@/server/trpc/validators/transactions-validator";
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import TransactionLine from './transaction-line';   
-
+import TransactionLine from "./transaction-line";
+import { useAuth } from "@/components/auth/use-auth";
 interface PaginatedTransactionsModalProps {
   userId: string;
   isOpen: boolean;
@@ -17,30 +17,44 @@ interface PaginatedTransactionsModalProps {
 }
 
 const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
-  userId,
   isOpen,
   onClose,
 }) => {
-  const [allTransactions, setAllTransactions] = useState<TransactionWithProcessedBy[]>([]);
+  const [allTransactions, setAllTransactions] = useState<
+    TransactionWithProcessedBy[] | TransactionWithUser[]
+  >([]);
+  const { user } = useAuth();
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isStaff = user?.role && user.role <= 2;
 
   const pageSize = 15;
 
-  const { data, isLoading, isFetching } = trpc.transaction.getAllTransactions.useQuery(
-    { 
-      userId, 
-      cursor,
-      limit: pageSize 
-    },
-    { 
-      enabled: isOpen && !!userId,
-      refetchOnWindowFocus: false,
-      refetchOnMount: true,
-    }
-  );
+  const { data, isLoading, isFetching } = isStaff
+    ? trpc.transaction.getAllStaffTransactions.useQuery(
+        {
+          cursor,
+          limit: pageSize,
+        },
+        {
+          enabled: isOpen,
+          refetchOnWindowFocus: false,
+          refetchOnMount: true,
+        }
+      )
+    : trpc.transaction.getAllTransactions.useQuery(
+        {
+          cursor,
+          limit: pageSize,
+        },
+        {
+          enabled: isOpen,
+          refetchOnWindowFocus: false,
+          refetchOnMount: true,
+        }
+      );
 
   useEffect(() => {
     if (isOpen) {
@@ -59,9 +73,11 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
         setAllTransactions(data.transactions);
       } else {
         // Subsequent loads - append new transactions
-        setAllTransactions(prev => {
-          const existingIds = new Set(prev.map(t => t.id));
-          const newTransactions = data.transactions.filter(t => !existingIds.has(t.id));
+        setAllTransactions((prev: any[]) => {
+          const existingIds = new Set(prev.map((t) => t.id));
+          const newTransactions = data.transactions.filter(
+            (t) => !existingIds.has(t.id)
+          );
           return [...prev, ...newTransactions];
         });
       }
@@ -72,7 +88,13 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
   }, [data, isOpen, cursor]);
 
   const loadMore = useCallback(() => {
-    if (hasNextPage && !isLoading && !isFetching && !isLoadingMore && data?.nextCursor) {
+    if (
+      hasNextPage &&
+      !isLoading &&
+      !isFetching &&
+      !isLoadingMore &&
+      data?.nextCursor
+    ) {
       setIsLoadingMore(true);
       setCursor(data.nextCursor);
     }
@@ -86,7 +108,10 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
     const { scrollTop, scrollHeight, clientHeight } = container;
     const threshold = 100;
 
-    if (allTransactions.length > 0 && scrollHeight - scrollTop - clientHeight < threshold) {
+    if (
+      allTransactions.length > 0 &&
+      scrollHeight - scrollTop - clientHeight < threshold
+    ) {
       loadMore();
     }
   }, [loadMore, allTransactions.length, isLoadingMore, hasNextPage]);
@@ -95,23 +120,32 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container && isOpen) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-      return () => container.removeEventListener('scroll', handleScroll);
+      container.addEventListener("scroll", handleScroll, { passive: true });
+      return () => container.removeEventListener("scroll", handleScroll);
     }
   }, [handleScroll, isOpen]);
 
   // Loading state for initial load
   if ((isLoading && !cursor) || (!data && isOpen && !isLoading)) {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose} aria-label="Recent Transactions">
+      <Dialog
+        open={isOpen}
+        onOpenChange={onClose}
+        aria-label="Recent Transactions"
+      >
         <DialogContent className="w-[80%] max-w-2xl max-h-[80vh] flex flex-col p-0">
           <DialogHeader className="p-6 border-b">
-            <DialogTitle className="text-xl font-semibold">All Transactions</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              All Transactions
+            </DialogTitle>
           </DialogHeader>
           <div className="flex-1 px pb-6">
             <div className="space-y-4 pt-6">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="animate-pulse flex justify-between items-center py-3">
+                <div
+                  key={i}
+                  className="animate-pulse flex justify-between items-center py-3"
+                >
                   <div className="flex space-x-4">
                     <Skeleton className="h-4 w-20" />
                     <Skeleton className="h-4 w-32" />
@@ -127,20 +161,26 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose} aria-label="Recent Transactions">
-      <DialogContent 
-        aria-description="View all transactions for the user" 
+    <Dialog
+      open={isOpen}
+      onOpenChange={onClose}
+      aria-label="Recent Transactions"
+    >
+      <DialogContent
+        aria-description="View all transactions for the user"
         className="w-[80%] max-w-2xl max-h-[80vh] flex flex-col p-0"
       >
         <DialogHeader className="p-4 border-b shrink-0">
-          <DialogTitle className="text-xl font-semibold">All Transactions</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
+            All Transactions
+          </DialogTitle>
         </DialogHeader>
         <div className="flex-1 min-h-0 pl-6 pb-6">
-          <div 
+          <div
             ref={scrollContainerRef}
             className="h-full overflow-y-auto pr-2 pt-3 custom-scrollbar"
-            style={{ 
-              maxHeight: 'calc(80vh - 80px)',
+            style={{
+              maxHeight: "calc(80vh - 80px)",
             }}
           >
             {allTransactions.length === 0 && !isLoading ? (
@@ -150,7 +190,10 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
             ) : (
               <div className="space-y-3">
                 {allTransactions.map((transaction) => (
-                  <TransactionLine key={transaction.id} transaction={transaction} />
+                  <TransactionLine
+                    key={transaction.id}
+                    transaction={transaction}
+                  />
                 ))}
 
                 {/* Loading more indicator */}

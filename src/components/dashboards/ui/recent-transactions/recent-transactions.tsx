@@ -10,28 +10,40 @@ import TransactionLine from "./transaction-line";
 interface RecentTransactionsProps {
   userId: string;
   limit?: number;
+  paymentStaff?: boolean;
 }
 
 export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
   userId,
   limit = 7,
+  paymentStaff = false,
 }) => {
   const [showAllTransactions, setShowAllTransactions] = useState(false);
 
-  const { 
-    data: transactions, 
-    isLoading, 
+  const {
+    data: transactions,
+    isLoading,
     error,
-    refetch 
-  } = trpc.transaction.getUserTransactionHistory.useQuery(
-    { userId, limit },
-    { 
-      enabled: !!userId,
-      staleTime: 0,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true
-    }
-  );
+    refetch,
+  } = paymentStaff
+    ? trpc.transaction.getPaymentStaffTransactionHistory.useQuery(
+        { limit },
+        {
+          enabled: !!userId,
+          staleTime: 0,
+          refetchOnWindowFocus: true,
+          refetchOnMount: true,
+        }
+      )
+    : trpc.transaction.getUserTransactionHistory.useQuery(
+        { limit },
+        {
+          enabled: !!userId,
+          staleTime: 0,
+          refetchOnWindowFocus: true,
+          refetchOnMount: true,
+        }
+      );
 
   if (error) {
     return (
@@ -42,10 +54,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
         <CardContent>
           <div className="text-center py-8">
             <p className="text-red-500 mb-4">Error loading transactions</p>
-            <Button 
-              onClick={() => refetch()}
-              variant="outline"
-            >
+            <Button onClick={() => refetch()} variant="outline">
               Retry
             </Button>
           </div>
@@ -89,9 +98,9 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Recent Transactions</CardTitle>
-          <Button 
+          <Button
             onClick={() => setShowAllTransactions(true)}
-            variant="outline" 
+            variant="outline"
             size="sm"
           >
             <Eye className="h-4 w-4 mr-2" />
@@ -100,7 +109,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
         </CardHeader>
         <CardContent>
           <p className="text-gray-500 text-center py-8">
-            No recent transactions. Start by recharging your account!
+            No recent transactions.
           </p>
         </CardContent>
       </Card>
@@ -112,9 +121,9 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Recent Transactions</CardTitle>
-          <Button 
+          <Button
             onClick={() => setShowAllTransactions(true)}
-            variant="outline" 
+            variant="outline"
             size="sm"
           >
             <Eye className="h-4 w-4 mr-2" />

@@ -11,7 +11,7 @@
 - Monthly spending summary
 - Menu
 
-### Additional Pages/Features
+### Additional Features
 - Meal Scheduling Page: Calendar interface to book meals up to saturday
 - Transaction History: Full payment and meal schedule history with filters
 - Profile Settings: Change password, update contact info
@@ -28,11 +28,10 @@
 ## 💰 PAYMENT STAFF Dashboard
 ### Dashboard Overview
 - Daily collection summary (total money collected today)
-- Recent deposit transactions (last 10 money deposits made)
+- Recent deposit transactions (last 10 money deposits made)  ( the element name is recent transactions which i already made)
 - QR Scanner button (prominent, quick access)
-- Quick deposit amounts (200, 500, 1000, 2000 millimes buttons)
+- Quick deposit amounts (1000, 2000, 5000, 10000, 20000 millimes buttons)
 - Pending deposits (if offline mode was used)
-- Daily cash reconciliation (expected vs actual cash)
 
 ### Additional Pages/Features
 - QR Code Scanner Page: Full-screen camera interface for scanning student QRs
@@ -40,7 +39,6 @@
 - Daily Reports: Complete transaction history for their shift
 - Cash Register: Track physical cash received vs digital deposits
 - Student Account Lookup: Search and view student balances
-- Deposit History: All deposits they've processed with timestamps
 - Offline Transaction Queue: Sync pending transactions when online
 
 ## ✅ VERIFICATION STAFF Dashboard
@@ -86,8 +84,6 @@
 ### Dashboard Overview
 - Public Information: Canteen hours, meal times, location
 - Weekly Menu Display (if available)
-- Meal Prices: Current pricing for students and teachers
-- System Status: Whether the canteen is currently accepting orders
 - Contact Information: How to get help or report issues
 - Registration Information: How students/teachers can get accounts
 

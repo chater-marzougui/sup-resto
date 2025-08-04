@@ -79,16 +79,29 @@ export const superAdminProcedure = t.procedure.use(
 /**
  * Custom role-based procedure
  */
-export const roleProcedure = (allowedRoles: number[]) => {
+export const roleProcedure = (allowedRoles: number | number[]) => {
   return t.procedure.use(
     middleware(async ({ ctx, next }) => {
       const authedCtx = enforceUserIsAuthed(ctx);
       const activeCtx = enforceUserIsActive(authedCtx);
-      
-      if (!allowedRoles.includes(activeCtx.user?.role ?? -1)) {
+      if (Array.isArray(allowedRoles)) {
+        if (!allowedRoles.includes(activeCtx.user?.role ?? -1)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Insufficient permissions',
+          });
+        }
+      } else if (typeof allowedRoles === 'number' && activeCtx.user?.role !== allowedRoles) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'Insufficient permissions',
+        });
+      }
+
+      if (!activeCtx.user) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'User not authenticated',
         });
       }
       

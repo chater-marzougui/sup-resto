@@ -112,14 +112,24 @@ export const transactionIdValidator = z.object({
 
 // User transaction history validator
 export const userTransactionHistoryValidator = z.object({
-  userId: baseUserValidator.shape.id,
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
   type: z.enum(transactionTypeEnum.enumValues).optional(),
 });
 
 export const transactionWithProcessedByValidator = baseTransactionValidator.extend({
-  processedByUser: getUserValidatorForTransaction.nullable(),
+  processedByUser: getUserValidatorForTransaction.omit({
+    firstName: true,
+    lastName: true,
+  })
+  .nullable(),
+});
+
+
+export const transactionWithUserValidator = baseTransactionValidator.extend({
+  user: getUserValidatorForTransaction.omit({
+    role: true,
+  }).nullable(),
 });
 
 export const getAllTransactionsValidator = z.object({
@@ -128,11 +138,21 @@ export const getAllTransactionsValidator = z.object({
   hasNextPage: z.boolean().default(false),
 });
 
+
+export const getAllStaffTransactionsValidator = z.object({
+  transactions: z.array(transactionWithUserValidator).optional().default([]),
+  nextCursor: z.string().optional(),
+  hasNextPage: z.boolean().default(false),
+});
+
 export type GetAllTransactionsType = z.infer<typeof getAllTransactionsValidator>;
+export type GetAllStaffTransactionsType = z.infer<typeof getAllStaffTransactionsValidator>;
 
 // Export types
 export type Transaction = z.infer<typeof baseTransactionValidator>;
 export type TransactionWithProcessedBy = z.infer<typeof transactionWithProcessedByValidator>;
+export type TransactionWithUser = z.infer<typeof transactionWithUserValidator>;
+
 export type CreateTransactionInput = z.infer<typeof createTransactionValidator>;
 export type BulkScheduleInput = z.infer<typeof bulkScheduleValidator>;
 export type RefundTransactionInput = z.infer<typeof refundTransactionValidator>;

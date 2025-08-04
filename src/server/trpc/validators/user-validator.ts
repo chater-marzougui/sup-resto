@@ -31,6 +31,8 @@ export const paginatedUsersValidator = z.object({
 
 export const getUserValidatorForTransaction = z.object({
     id: baseUserValidator.shape.id,
+    firstName: baseUserValidator.shape.firstName,
+    lastName: baseUserValidator.shape.lastName,
     role: baseUserValidator.shape.role,
 });
 

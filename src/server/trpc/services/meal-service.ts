@@ -267,22 +267,6 @@ export class MealService {
       },
     ];
 
-    const mealUpdates = toUpdateMeals.map((meal) => {
-      return {
-        id: meal.id,
-        userId: meal.userId,
-        mealTime: meal.mealTime,
-        scheduledDate: meal.scheduledDate,
-        status: "scheduled",
-        mealCost: MEAL_COST,
-        statusHistory: meal.statusHistory
-          ? [...meal.statusHistory, ...statusHistory]
-          : statusHistory,
-        createdAt: meal.createdAt,
-        updatedAt: new Date(),
-      };
-    });
-
     // Insert all meals
     const mealData = newMealDates.map((meal) => {
       const scheduledDateTime = new Date(
@@ -305,15 +289,16 @@ export class MealService {
       mealData.length > 0 &&
         db.insert(mealSchedules).values(mealData).returning(),
 
-      mealUpdates.length > 0
+      toUpdateMeals.length > 0
         ? Promise.all(
-            mealUpdates.map((meal) =>
+            toUpdateMeals.map((meal) =>
               db
                 .update(mealSchedules)
                 .set({
                   status: "scheduled",
-                  statusHistory: meal.statusHistory,
-                  updatedAt: meal.updatedAt,
+                  mealCost: MEAL_COST,
+                  statusHistory: [...(meal.statusHistory || []), ...statusHistory],
+                  updatedAt: new Date(),
                 })
                 .where(eq(mealSchedules.id, meal.id))
             )

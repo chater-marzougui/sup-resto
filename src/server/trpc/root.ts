@@ -6,13 +6,17 @@ import { authRouter } from '@/server/trpc/routers/auth.router';
 import { mealRouter } from './routers/meal.router';
 import { transactionRouter } from './routers/transactions.router';
 import { analyticsRouter } from './routers/analytics.router';
+import { paymentRouter } from './routers/payment-staff.router';
+import { onlineRouter } from './routers/online.router';
 
 export const appRouter = createTRPCRouter({
   user: userRouter,
   auth: authRouter,
   meal: mealRouter,
+  payment: paymentRouter,
   analytics: analyticsRouter,
   transaction: transactionRouter,
+  online: onlineRouter,
 });
 
 export type AppRouter = typeof appRouter;

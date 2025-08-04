@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure, roleProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { TransactionService } from "../services/transactions-service";
 import {
@@ -13,7 +13,9 @@ import {
   userTransactionHistoryValidator,
   cursorTransactionsValidator,
   getAllTransactionsValidator,
-  transactionWithProcessedByValidator
+  transactionWithProcessedByValidator,
+  transactionWithUserValidator,
+  getAllStaffTransactionsValidator,
 } from "../validators/transactions-validator";
 import { RoleEnum } from "@/server/db/enums";
 import { userIdValidator } from "../validators/user-validator";
@@ -28,28 +30,40 @@ export const transactionRouter = createTRPCRouter({
       try {
         // For meal redemption, only verification staff can redempt meals
         // For other types, require staff permissions
-        if (input.type === 'meal_redemption' && ctx.user?.role && ctx.user?.role >= RoleEnum.verificationStaff) {
+        if (
+          input.type === "meal_redemption" &&
+          ctx.user?.role &&
+          ctx.user?.role >= RoleEnum.verificationStaff
+        ) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Only verification staff can redeem meals',
+            code: "FORBIDDEN",
+            message: "Only verification staff can redeem meals",
           });
         }
 
-        if (input.type === 'balance_adjustment' || input.type === 'balance_recharge') {
+        if (
+          input.type === "balance_adjustment" ||
+          input.type === "balance_recharge"
+        ) {
           // Only admin and staff can adjust balance or recharge
           if (!ctx.user?.role || ctx.user.role > RoleEnum.verificationStaff) {
             throw new TRPCError({
-              code: 'FORBIDDEN',
-              message: 'Only administrators or staff can adjust balances or recharge',
+              code: "FORBIDDEN",
+              message:
+                "Only administrators or staff can adjust balances or recharge",
             });
           }
         }
 
         // Ensure user can only create transactions for themselves unless they're staff
-        if (input.userId !== ctx.user?.id && ctx.user?.role && ctx.user.role > RoleEnum.verificationStaff) {
+        if (
+          input.userId !== ctx.user?.id &&
+          ctx.user?.role &&
+          ctx.user.role > RoleEnum.verificationStaff
+        ) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Cannot create transactions for other users',
+            code: "FORBIDDEN",
+            message: "Cannot create transactions for other users",
           });
         }
 
@@ -64,8 +78,8 @@ export const transactionRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create transaction',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create transaction",
           cause: error,
         });
       }
@@ -80,8 +94,8 @@ export const transactionRouter = createTRPCRouter({
       // Check if user is staff (payment or verification staff, or admin)
       if (ctx.user?.role && ctx.user.role > 2) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only staff members can process bulk meal schedules',
+          code: "FORBIDDEN",
+          message: "Only staff members can process bulk meal schedules",
         });
       }
 
@@ -97,8 +111,8 @@ export const transactionRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to process bulk schedule',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process bulk schedule",
           cause: error,
         });
       }
@@ -110,21 +124,20 @@ export const transactionRouter = createTRPCRouter({
   redeemMeal: protectedProcedure
     .input(userIdValidator)
     .mutation(async ({ ctx, input }) => {
-
-        // Check if user is authenticated
-        if (!ctx.user?.id) {
-            throw new TRPCError({
-                code: 'UNAUTHORIZED',
-                message: 'User not authenticated',
-            });
-        }
+      // Check if user is authenticated
+      if (!ctx.user?.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not authenticated",
+        });
+      }
 
       try {
         // Users can redeem their own meals, staff can redeem for others
         if (ctx.user.role > RoleEnum.verificationStaff) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Only verification staff or higher can redeem meals',
+            code: "FORBIDDEN",
+            message: "Only verification staff or higher can redeem meals",
           });
         }
 
@@ -134,8 +147,8 @@ export const transactionRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to redeem meal',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to redeem meal",
           cause: error,
         });
       }
@@ -150,8 +163,8 @@ export const transactionRouter = createTRPCRouter({
       // Check if user is staff
       if (ctx.user?.role && ctx.user.role > 2) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only staff members can process refunds',
+          code: "FORBIDDEN",
+          message: "Only staff members can process refunds",
         });
       }
 
@@ -167,8 +180,8 @@ export const transactionRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to process refund',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process refund",
           cause: error,
         });
       }
@@ -183,8 +196,8 @@ export const transactionRouter = createTRPCRouter({
       // Check if user is admin
       if (ctx.user?.role !== 0) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators can adjust balances',
+          code: "FORBIDDEN",
+          message: "Only administrators can adjust balances",
         });
       }
 
@@ -200,13 +213,12 @@ export const transactionRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to adjust balance',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to adjust balance",
           cause: error,
         });
       }
     }),
-
 
   /**
    * Get user transaction history
@@ -217,20 +229,68 @@ export const transactionRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         // Users can view their own history, staff can view any history
-        if (input.userId !== ctx.user?.id && ctx.user?.role && ctx.user.role > 2) {
+        if (!ctx.user?.id) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Cannot access other users\' transaction history',
+            code: "UNAUTHORIZED",
+            message: "User not authenticated",
           });
         }
-        return await TransactionService.getUserTransactionHistory(input);
+
+        if (ctx.user.role > 2) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Cannot access other users' transaction history",
+          });
+        }
+        return await TransactionService.getUserTransactionHistory(
+          ctx.user?.id,
+          input
+        );
       } catch (error) {
         if (error instanceof TRPCError) {
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch transaction history',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch transaction history",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Get Payment Staff Transactions
+   */
+
+  getPaymentStaffTransactionHistory: roleProcedure(RoleEnum.paymentStaff)
+    .input(userTransactionHistoryValidator)
+    .output(z.array(transactionWithUserValidator))
+    .query(async ({ ctx, input }) => {
+      try {
+        if (!ctx.user?.id) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "User not authenticated",
+          });
+        }
+
+        if (ctx.user.role !== RoleEnum.paymentStaff) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Access denied for non-payment staff",
+          });
+        }
+        return await TransactionService.getPaymentStaffTransactionHistory(
+          ctx.user?.id,
+          input
+        );
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch transaction history",
           cause: error,
         });
       }
@@ -246,8 +306,8 @@ export const transactionRouter = createTRPCRouter({
       // Check if user is staff
       if (ctx.user?.role && ctx.user.role > 2 && ctx.user.id !== input.userId) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only staff members can view all transactions',
+          code: "FORBIDDEN",
+          message: "Only staff members can view all transactions",
         });
       }
 
@@ -255,8 +315,30 @@ export const transactionRouter = createTRPCRouter({
         return await TransactionService.getAllTransactions(input);
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch transactions',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch transactions",
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Get all transactions for staff with filters and pagination
+   */
+  getAllStaffTransactions: roleProcedure(RoleEnum.paymentStaff)
+    .input(cursorTransactionsValidator)
+    .output(getAllStaffTransactionsValidator)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await TransactionService.getAllStaffTransactions({
+          ...input,
+          processedBy: ctx.user?.id,
+          userId: undefined
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch transactions",
           cause: error,
         });
       }
@@ -271,8 +353,8 @@ export const transactionRouter = createTRPCRouter({
       // Check if user is admin
       if (ctx.user?.role !== 0) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators can view transaction statistics',
+          code: "FORBIDDEN",
+          message: "Only administrators can view transaction statistics",
         });
       }
 
@@ -280,8 +362,8 @@ export const transactionRouter = createTRPCRouter({
         return await TransactionService.getTransactionStats(input);
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch transaction statistics',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch transaction statistics",
           cause: error,
         });
       }
@@ -296,8 +378,8 @@ export const transactionRouter = createTRPCRouter({
       // Check if user is admin
       if (ctx.user?.role !== 0) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only administrators can perform bulk balance updates',
+          code: "FORBIDDEN",
+          message: "Only administrators can perform bulk balance updates",
         });
       }
 
@@ -313,8 +395,8 @@ export const transactionRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to process bulk balance update',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process bulk balance update",
           cause: error,
         });
       }
@@ -329,8 +411,8 @@ export const transactionRouter = createTRPCRouter({
       // Check if user is staff
       if (ctx.user?.role && ctx.user.role > 2) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only staff members can view transaction details',
+          code: "FORBIDDEN",
+          message: "Only staff members can view transaction details",
         });
       }
 
@@ -341,8 +423,8 @@ export const transactionRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch transaction details',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch transaction details",
           cause: error,
         });
       }
@@ -352,15 +434,17 @@ export const transactionRouter = createTRPCRouter({
    * Get low balance users (admin only)
    */
   getLowBalanceUsers: protectedProcedure
-    .input(z.object({
-      threshold: z.number().min(0).default(5),
-    }))
+    .input(
+      z.object({
+        threshold: z.number().min(0).default(5),
+      })
+    )
     .query(async ({ ctx, input }) => {
       // Check if user is admin or staff
       if (ctx.user?.role && ctx.user.role > 2) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only staff members can view low balance users',
+          code: "FORBIDDEN",
+          message: "Only staff members can view low balance users",
         });
       }
 
@@ -368,8 +452,8 @@ export const transactionRouter = createTRPCRouter({
         return await TransactionService.getLowBalanceUsers(input.threshold);
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch low balance users',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch low balance users",
           cause: error,
         });
       }
@@ -378,34 +462,33 @@ export const transactionRouter = createTRPCRouter({
   /**
    * Get daily transaction summary for today (staff only)
    */
-  getTodayTransactionSummary: protectedProcedure
-    .query(async ({ ctx }) => {
-      // Check if user is staff
-      if (ctx.user?.role && ctx.user.role > 2) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only staff members can view transaction summaries',
-        });
-      }
+  getTodayTransactionSummary: protectedProcedure.query(async ({ ctx }) => {
+    // Check if user is staff
+    if (ctx.user?.role && ctx.user.role > 2) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only staff members can view transaction summaries",
+      });
+    }
 
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        return await TransactionService.getTransactionStats({
-          startDate: today,
-          endDate: tomorrow,
-          groupBy: 'day',
-        });
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch today\'s transaction summary',
-          cause: error,
-        });
-      }
-    }),
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      return await TransactionService.getTransactionStats({
+        startDate: today,
+        endDate: tomorrow,
+        groupBy: "day",
+      });
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch today's transaction summary",
+        cause: error,
+      });
+    }
+  }),
 });

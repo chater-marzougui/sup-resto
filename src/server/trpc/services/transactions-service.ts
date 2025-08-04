@@ -12,6 +12,7 @@ import type {
   UserTransactionHistoryInput,
   CursorTransactionsInput,
   GetAllTransactionsType,
+  GetAllStaffTransactionsType,
 } from "../validators/transactions-validator";
 import { MealCosts } from "@/config/global-config";
 import { MealService } from "./meal-service";
@@ -201,8 +202,8 @@ export class TransactionService {
   /**
    * Get user transaction history
    */
-  static async getUserTransactionHistory(input: UserTransactionHistoryInput) {
-    const conditions = [eq(transactions.userId, input.userId)];
+  static async getUserTransactionHistory(userId: string, input: UserTransactionHistoryInput) {
+    const conditions = [eq(transactions.userId, userId)];
 
     if (input.type) {
       conditions.push(eq(transactions.type, input.type));
@@ -215,6 +216,36 @@ export class TransactionService {
             columns: {
               id: true,
               role: true,
+            },
+          },
+        },
+        orderBy: desc(transactions.createdAt),
+        limit: input.limit,
+        offset: input.offset,
+    });
+
+    return userTransactions;
+  }
+
+  
+  /**
+   * Get user transaction history
+   */
+  static async getPaymentStaffTransactionHistory(userId: string, input: UserTransactionHistoryInput) {
+    const conditions = [eq(transactions.processedBy, userId)];
+
+    if (input.type) {
+      conditions.push(eq(transactions.type, input.type));
+    }
+
+    const userTransactions = await db.query.transactions.findMany({
+        where: and(...conditions),
+        with: {
+          user: {
+            columns: {
+              id: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
@@ -271,6 +302,70 @@ export class TransactionService {
         columns: {
           id: true,
           role: true,
+        },
+      },
+    }
+  });
+
+  // Check if there are more records
+  const hasNextPage = transactionsList.length > input.limit;
+  
+  // Remove the extra record if it exists
+  let nextCursor = undefined;
+  if (hasNextPage) {
+    const el = transactionsList.pop();
+    nextCursor = el?.id;
+  }
+
+  return {
+    transactions: transactionsList,
+    hasNextPage,
+    nextCursor,
+  };
+}
+
+
+  static async getAllStaffTransactions(input: CursorTransactionsInput): Promise<GetAllStaffTransactionsType> {
+  const conditions = [];
+  
+  if (input.userId) {
+    conditions.push(eq(transactions.userId, input.userId));
+  }
+  if (input.type) {
+    conditions.push(eq(transactions.type, input.type));
+  }
+  if (input.startDate) {
+    conditions.push(gte(transactions.createdAt, input.startDate));
+  }
+  if (input.endDate) {
+    conditions.push(lte(transactions.createdAt, input.endDate));
+  }
+  if (input.processedBy) {
+    conditions.push(eq(transactions.processedBy, input.processedBy));
+  }
+  if (input.minAmount) {
+    conditions.push(gte(sql`CAST(${transactions.amount} AS DECIMAL)`, input.minAmount));
+  }
+  if (input.maxAmount) {
+    conditions.push(lte(sql`CAST(${transactions.amount} AS DECIMAL)`, input.maxAmount));
+  }
+
+  // Add cursor condition if provided
+  if (input.cursor) {
+    conditions.push(lt(transactions.id, input.cursor));
+  }
+
+
+  const transactionsList = await db.query.transactions.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    orderBy: desc(transactions.createdAt),  
+    limit: input.limit + 1,
+    with: {
+      user: {
+        columns: {
+          id: true,
+          firstName: true,
+          lastName: true,
         },
       },
     }

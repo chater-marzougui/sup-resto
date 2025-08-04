@@ -1,5 +1,7 @@
 # Smart Digital Meal Ticketing System - SupResto
 
+important: GS1-128 (UCC/EAN-128) (university encoding)
+important: Code-2of5 Interleaved (CIN CARD Encoding)
 ## Project Overview
 
 The **SupResto** is a comprehensive solution designed to modernize university canteen operations by replacing traditional paper-based meal tickets with a fully digital system. The system leverages existing student ID QR codes (containing CIN - Citizen Identity Number) to provide secure, efficient, and environmentally-friendly meal management.

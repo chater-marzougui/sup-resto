@@ -6,6 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 
 const formSchema = z.object({
     cin: z.string().min(1, "CIN is required"),
@@ -14,7 +15,8 @@ const formSchema = z.object({
 
 export function LoginForm() {
     const { login, isLoading, error } = useAuth();
-    
+    const [ e, setError ] = useState<any | null>(null);
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -24,7 +26,12 @@ export function LoginForm() {
     });
 
     const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-        await login(values.cin, values.password);
+        try {
+            await login(values.cin, values.password);
+        } catch (err: any) {
+            setError(err);
+            console.error("Login failed:", (err as Error).message);
+        }
     };
 
     return (
@@ -61,6 +68,7 @@ export function LoginForm() {
                 </Button>
                 
                 {error && <p className="text-red-500 text-sm">{error}</p>}
+                {e && <p className="text-red-500 text-sm">{e}</p>}
             </form>
         </Form>
     );

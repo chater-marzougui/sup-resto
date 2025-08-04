@@ -1,105 +1,277 @@
-"use client";
+import React, { useState, useEffect } from "react";
+import { withDashboardLayout } from "./withDashboardLayout";
+import { RoleEnum } from "@/server/db/enums";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Wallet,
+  DollarSign,
+  Users,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+} from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { useProfile } from "@/hooks/use-profile";
+import { formatCurrency, formatDate } from "@/lib/utils/main-utils";
+import { StatCard } from "../elements/stat-card";
+import { PaymentDepositCard } from "./ui/payment-deposit-card";
+import { useOnlineStatus } from "@/hooks/use-Online";
+import { RecentTransactions } from "./ui/recent-transactions/recent-transactions";
 
-// src/components/dashboards/staff-dashboard.tsx
-import { Scan, Users, TrendingUp, RefreshCw } from 'lucide-react';
-import { withDashboardLayout} from './withDashboardLayout';
-import { DashboardLayout } from '../layouts/dashboardLayout';
-import { RoleEnum } from '@/server/db/enums';
+const PaymentStaffDashboardComponent = () => {
+  const { user, isLoadingUser } = useProfile();
+  const { userOnline, serverOnline } = useOnlineStatus();
+  const [offlineTransactions, setOfflineTransactions] = useState<any[]>([]);
+  const utils = trpc.useUtils();
 
-interface StaffDashboardProps {}
+  // tRPC queries
+  const { data: dailyCollection, isLoading: loadingDaily } =
+    trpc.payment.getDailyCollection.useQuery(
+      {},
+      { refetchInterval: 60000, enabled: !!!user }
+    );
 
-const PaymentStaffDashboardComponent = (props: StaffDashboardProps) => {
-  const mockData = {
-    todayCheckins: 142,
-    pendingSync: 5,
-    lastSync: '5 minutes ago',
-    activeStudents: 1250
+  const { data: recentTransactions, isLoading: loadingRecent } =
+    trpc.payment.getRecentTransactions.useQuery(
+      {
+        limit: 10,
+      },
+      { refetchInterval: 60000, enabled: !!!user }
+    );
+
+  const { data: cashRegister } = trpc.payment.getCashRegisterSummary.useQuery(
+    {},
+    { refetchInterval: 60000, enabled: !!!user }
+  );
+
+  // Mutations
+  const syncOfflineMutation =
+    trpc.payment.syncOfflineTransactions.useMutation();
+
+  // Load offline transactions from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("offlineTransactions");
+    if (stored) {
+      setOfflineTransactions(JSON.parse(stored));
+    }
+  }, []);
+
+  // Sync offline transactions when coming back online
+  useEffect(() => {
+    if (serverOnline && offlineTransactions.length > 0) {
+      handleSyncOfflineTransactions();
+    }
+  }, [serverOnline]);
+
+  const handleSyncOfflineTransactions = async () => {
+    console.log("Syncing offline transactions:", offlineTransactions);
+    if (offlineTransactions.length === 0) return;
+
+    try {
+      const result = await syncOfflineMutation.mutateAsync({
+        transactions: offlineTransactions,
+      });
+
+      toast.success(result.message);
+
+      // Clear offline transactions
+      setOfflineTransactions([]);
+      localStorage.removeItem("offlineTransactions");
+
+      // Refresh data
+      await utils.payment.invalidate();
+    } catch (error) {
+      toast.error("Failed to sync offline transactions");
+    }
   };
 
+  if (loadingDaily || loadingRecent || isLoadingUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <DashboardLayout 
-      title="Staff Dashboard" 
-      subtitle="Manage student check-ins and system operations"
-      actions={
-        <>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-            <Scan className="h-4 w-4" />
-            <span>QR Scanner</span>
-          </button>
-          <button className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center space-x-2">
-            <RefreshCw className="h-4 w-4" />
-            <span>Sync Data</span>
-          </button>
-        </>
-      }
-    >
-      {/* Staff Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <Scan className="h-8 w-8 text-green-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Today's Check-ins</p>
-              <p className="text-2xl font-bold text-gray-900">{mockData.todayCheckins}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-blue-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Active Students</p>
-              <p className="text-2xl font-bold text-gray-900">{mockData.activeStudents}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <RefreshCw className="h-8 w-8 text-yellow-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Pending Sync</p>
-              <p className="text-2xl font-bold text-gray-900">{mockData.pendingSync}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <TrendingUp className="h-8 w-8 text-purple-500" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Last Sync</p>
-              <p className="text-sm font-bold text-gray-900">{mockData.lastSync}</p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Badge
+            variant={serverOnline ? "default" : "destructive"}
+            className="flex items-center space-x-1"
+          >
+            <div
+              className={`w-2 h-2 rounded-full ${
+                userOnline ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+            <span>{userOnline ? "Online" : "Offline"}</span>
+          </Badge>
+          {offlineTransactions.length > 0 && (
+            <Button
+              onClick={handleSyncOfflineTransactions}
+              disabled={!userOnline || syncOfflineMutation.isPending}
+              variant="outline"
+              size="sm"
+              className="flex items-center space-x-1"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${
+                  syncOfflineMutation.isPending ? "animate-spin" : ""
+                }`}
+              />
+              <span>Sync ({offlineTransactions.length})</span>
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors">
-            <Scan className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm font-medium text-gray-900">Scan Student QR</p>
-          </button>
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors">
-            <Users className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm font-medium text-gray-900">Manual Check-in</p>
-          </button>
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors">
-            <RefreshCw className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm font-medium text-gray-900">Force Sync</p>
-          </button>
-        </div>
+      {/* Daily Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Today's Collection"
+          value={`${formatCurrency(dailyCollection?.totalAmount || 0)}`}
+          icon={DollarSign}
+          iconColor="text-green-500"
+          description={`${
+            dailyCollection?.transactionCount || 0
+          } transactions today`}
+        />
+
+        <StatCard
+          title="Pending Offline"
+          value={`${offlineTransactions.length} transactions`}
+          icon={AlertCircle}
+          iconColor="text-yellow-600"
+          description={`${offlineTransactions.length} transactions waiting to sync`}
+        />
       </div>
-    </DashboardLayout>
+
+      {/* Main Action Section */}
+      <div className="flex justify-center gap-4 flex-wrap">
+        <PaymentDepositCard
+          offlineTransactions={offlineTransactions}
+          setOfflineTransactions={setOfflineTransactions}
+          isOnline={userOnline}
+        />
+
+        {/* Recent Transactions */}
+        <RecentTransactions
+          userId={user?.id || ""}
+          limit={5}
+          paymentStaff={true}
+        />
+      </div>
+
+      {/* Offline Transactions Queue */}
+      {offlineTransactions.length > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-yellow-800">
+              <AlertCircle className="h-5 w-5" />
+              <span>Offline Transactions Queue</span>
+            </CardTitle>
+            <CardDescription className="text-yellow-700">
+              These transactions were saved offline and will sync automatically
+              when connection is restored
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {offlineTransactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="flex items-center justify-between p-2 bg-white rounded border"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <div>
+                      <span className="font-mono text-sm">
+                        {transaction.cin}
+                      </span>
+                      <span className="ml-2 text-sm text-gray-600">
+                        {formatDate(transaction.timestamp)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="font-medium">
+                    {formatCurrency(transaction.amount)}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {serverOnline && (
+              <Button
+                onClick={handleSyncOfflineTransactions}
+                disabled={syncOfflineMutation.isPending}
+                className="w-full mt-4"
+              >
+                {syncOfflineMutation.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Sync All Offline Transactions
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Button
+          variant="outline"
+          className="h-16"
+          onClick={() =>
+            (window.location.href = "/dashboard/payment/checkout")
+          }
+        >
+          <Users className="h-6 w-6 mr-2" />
+          Student Lookup
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-16"
+          onClick={() =>
+            (window.location.href = "/dashboard/payment/report")
+          }
+        >
+          <DollarSign className="h-6 w-6 mr-2" />
+          Daily Report
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-16"
+          onClick={() =>
+            (window.location.href = "/dashboard/payment/cash-register")
+          }
+        >
+          <Wallet className="h-6 w-6 mr-2" />
+          Cash Register
+        </Button>
+      </div>
+    </div>
   );
 };
 
-export const PaymentStaffDashboard = withDashboardLayout(PaymentStaffDashboardComponent, {
-  requiredRole: RoleEnum.paymentStaff
-});
+// Export with role-based access control
+export const PaymentStaffDashboard = withDashboardLayout(
+  PaymentStaffDashboardComponent,
+  {
+    requiredRole: RoleEnum.paymentStaff,
+  }
+);

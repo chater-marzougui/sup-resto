@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '@/components/auth/use-auth';
 
 export function useProfile() {
   const [isEditing, setIsEditing] = useState(false);
@@ -37,7 +36,12 @@ export function useProfile() {
   };
 
   const changePassword = (data: { oldPassword: string; newPassword: string }) => {
-    changePasswordMutation.mutate(data);
+    changePasswordMutation.mutate( {
+      id: user?.id || '',
+      currentPassword: data.oldPassword,
+      newPassword: data.newPassword,
+      confirmPassword: data.newPassword,
+    });
   };
 
   return {

@@ -4,17 +4,31 @@ import {
   formatDate,
   getRoleNameByNumber,
 } from "@/lib/utils/main-utils";
-import { TransactionWithProcessedBy } from "@/server/trpc/validators/transactions-validator";
+import { TransactionWithProcessedBy,transactionWithProcessedByValidator, transactionWithUserValidator, TransactionWithUser } from "@/server/trpc/validators/transactions-validator";
 
 const TransactionLine: React.FC<{
-  transaction: TransactionWithProcessedBy;
+  transaction: TransactionWithUser | TransactionWithProcessedBy;
 }> = ({ transaction }) => {
-  const processedBy =
-    transaction.userId === transaction.processedByUser?.id
-      ? "You"
-      : transaction.processedByUser
-      ? getRoleNameByNumber(transaction.processedByUser.role)
-      : "Transaction";
+  let processedBy = "Unknown";
+
+  try {
+    transaction = transactionWithProcessedByValidator.parse(transaction);
+    processedBy =
+      transaction.userId === transaction.processedByUser?.id
+        ? "You"
+        : transaction.processedByUser
+        ? getRoleNameByNumber(transaction.processedByUser.role)
+        : "Transaction";
+  } catch (error) {
+    transaction = transactionWithUserValidator.parse(transaction);
+    processedBy =
+      transaction.processedBy === transaction.user?.id
+        ? "You"
+        : transaction.user
+        ? `${transaction.user.firstName} ${transaction.user.lastName}`
+        : "Transaction";
+
+  }
 
   const isPositive = transaction.amount > 0;
 

@@ -40,7 +40,7 @@ export function withDashboardLayout<P extends object>(
     }
 
     return (
-      <div className="min-h-screen bg-background  ">
+      <div className="bg-background">
         <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <WrappedComponent {...props} />
         </main>
