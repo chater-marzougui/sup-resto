@@ -15,6 +15,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import BarcodeScannerButton from "@/components/elements/qr-code";
 
 interface PaymentDepositCardProps {
   offlineTransactions: any[];
@@ -31,12 +32,18 @@ export const PaymentDepositCard: React.FC<PaymentDepositCardProps> = ({
   const [amount, setAmount] = useState<number | null>(null);
   const utils = trpc.useUtils();
 
-  const createDepositMutation = trpc.payment.createDeposit.useMutation();
+  const createDepositMutation = trpc.payment.createDeposit.useMutation({
+    onSuccess: () => {
+      utils.payment.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to create deposit:", { description: error.message });
+    },
+  });
   // Quick deposit amounts
   const quickAmounts = [1000, 2000, 5000, 10000, 20000];
 
   const handleDeposit = async () => {
-    console.log("Handling manual deposit:", manualCin, amount);
     if (!manualCin || !amount) {
       toast.error("Please enter both CIN and amount");
       return;
@@ -47,39 +54,35 @@ export const PaymentDepositCard: React.FC<PaymentDepositCardProps> = ({
       return;
     }
 
-    try {
-      if (isOnline) {
-        const result = await createDepositMutation.mutateAsync({
-          cin: manualCin,
-          amount,
-        });
+    if (isOnline) {
+      await createDepositMutation.mutateAsync({
+        cin: manualCin,
+        amount,
+      });
 
-        await utils.payment.invalidate();
-        setManualCin("");
-        setAmount(null);
-        toast.success(
-          `Manual deposit of ${formatCurrency(amount)} created successfully!`
-        );
-      } else {
-        // Store offline
-        const offlineTransaction = {
-          id: `offline-${Date.now()}`,
-          cin: manualCin,
-          amount,
-          timestamp: new Date(),
-          synced: false,
-        };
+      await utils.payment.invalidate();
+      setManualCin("");
+      setAmount(null);
+      toast.success(
+        `Deposit of ${formatCurrency(amount)} created successfully!`
+      );
+    } else {
+      // Store offline
+      const offlineTransaction = {
+        id: `offline-${Date.now()}`,
+        cin: manualCin,
+        amount,
+        timestamp: new Date(),
+        synced: false,
+      };
 
-        const updated = [...offlineTransactions, offlineTransaction];
-        setOfflineTransactions(updated);
-        localStorage.setItem("offlineTransactions", JSON.stringify(updated));
+      const updated = [...offlineTransactions, offlineTransaction];
+      setOfflineTransactions(updated);
+      localStorage.setItem("offlineTransactions", JSON.stringify(updated));
 
-        toast.success("Transaction saved offline. Will sync when online.");
-        setManualCin("");
-        setAmount(null);
-      }
-    } catch (error) {
-      toast.error("Failed to create manual deposit");
+      toast.success("Transaction saved offline. Will sync when online.");
+      setManualCin("");
+      setAmount(null);
     }
   };
 
@@ -98,16 +101,7 @@ export const PaymentDepositCard: React.FC<PaymentDepositCardProps> = ({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* QR Scanner Button */}
-          <Button
-            className="w-full h-16 text-lg"
-            onClick={() => {
-              // Navigate to QR scanner page
-              window.location.href = "/dashboard/payment/scan";
-            }}
-          >
-            <Camera className="h-6 w-6 mr-2" />
-            Open QR Scanner
-          </Button>
+          <BarcodeScannerButton onScan={setManualCin} withManualInput={false} />
 
           {/* Manual CIN Entry */}
           <div className="space-y-2">

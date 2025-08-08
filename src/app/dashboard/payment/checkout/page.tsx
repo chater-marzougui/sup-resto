@@ -25,7 +25,7 @@ const StudentLookupPageComponent = () => {
     }
 
     if (searchCin.length < 5) {
-      toast.error('CIN must be at least 5 characters');
+      toast.error('CIN or Passport Number must be at least 5 characters');
       return;
     }
 

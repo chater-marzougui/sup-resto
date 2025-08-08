@@ -11,6 +11,7 @@ import { PaymentStaffDashboard } from '@/components/dashboards/payment-staff-das
 import { TeacherDashboard } from '@/components/dashboards/teacher-dashboard';
 import { VisitorDashboard } from '@/components/dashboards/visitor-dashboard';
 import { RoleEnum } from '@/server/db/enums';
+import LoadingSpinner from '@/components/elements/LoadingSpinner';
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -18,7 +19,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -27,11 +28,7 @@ export default function DashboardPage() {
   if (!user) {
     console.error('User not authenticated, redirecting to login');
     router.push('/auth/login');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner />
   }
 
   switch (user.role) {

@@ -1,7 +1,7 @@
-import { z } from 'zod';
-import { createTRPCRouter, roleProcedure } from '@/server/trpc/trpc';
-import { PaymentService } from '@/server/trpc/services/payment-staff-service';
-import { TRPCError } from '@trpc/server';
+import { z } from "zod";
+import { createTRPCRouter, roleProcedure } from "@/server/trpc/trpc";
+import { PaymentService } from "@/server/trpc/services/payment-staff-service";
+import { TRPCError } from "@trpc/server";
 import {
   createDepositValidator,
   manualDepositValidator,
@@ -9,8 +9,8 @@ import {
   dailyReportFiltersValidator,
   offlineTransactionValidator,
   quickDepositValidator,
-} from '../validators/payment-staff-validator';
-import { RoleEnum } from '@/server/db/enums';
+} from "../validators/payment-staff-validator";
+import { RoleEnum } from "@/server/db/enums";
 
 export const paymentRouter = createTRPCRouter({
   /**
@@ -23,17 +23,11 @@ export const paymentRouter = createTRPCRouter({
         const result = await PaymentService.createDeposit(input, ctx.user!.id);
         return {
           success: true,
-          message: 'Deposit created successfully',
+          message: "Deposit created successfully",
           data: result,
         };
       } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create deposit',
-        });
+        throw error;
       }
     }),
 
@@ -43,29 +37,21 @@ export const paymentRouter = createTRPCRouter({
   manualDeposit: roleProcedure(RoleEnum.paymentStaff)
     .input(manualDepositValidator)
     .mutation(async ({ input, ctx }) => {
-      try {
-        const result = await PaymentService.createDeposit({
+      const result = await PaymentService.createDeposit(
+        {
           cin: input.cin,
           amount: input.amount,
-        }, ctx.user!.id);
-        
-        return {
-          success: true,
-          message: 'Manual deposit created successfully',
-          data: result,
-          notes: input.notes,
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create manual deposit',
-        });
-      }
-    }),
+        },
+        ctx.user!.id
+      );
 
+      return {
+        success: true,
+        message: "Deposit created successfully",
+        data: result,
+        notes: input.notes,
+      };
+    }),
 
   /**
    * Lookup student by CIN
@@ -81,8 +67,8 @@ export const paymentRouter = createTRPCRouter({
           throw error;
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to lookup student',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to lookup student",
         });
       }
     }),
@@ -91,9 +77,14 @@ export const paymentRouter = createTRPCRouter({
    * Get daily collection summary
    */
   getDailyCollection: roleProcedure(RoleEnum.paymentStaff)
-    .input(z.object({
-      date: z.date().optional().default(() => new Date()),
-    }))
+    .input(
+      z.object({
+        date: z
+          .date()
+          .optional()
+          .default(() => new Date()),
+      })
+    )
     .query(async ({ input, ctx }) => {
       try {
         const summary = await PaymentService.getDailyCollectionSummary(
@@ -103,8 +94,8 @@ export const paymentRouter = createTRPCRouter({
         return summary;
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to get daily collection summary',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get daily collection summary",
         });
       }
     }),
@@ -113,9 +104,11 @@ export const paymentRouter = createTRPCRouter({
    * Get recent transactions
    */
   getRecentTransactions: roleProcedure(RoleEnum.paymentStaff)
-    .input(z.object({
-      limit: z.number().int().min(1).max(50).default(10),
-    }))
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(50).default(10),
+      })
+    )
     .query(async ({ input, ctx }) => {
       try {
         const transactions = await PaymentService.getRecentTransactions(
@@ -125,8 +118,8 @@ export const paymentRouter = createTRPCRouter({
         return transactions;
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to get recent transactions',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get recent transactions",
         });
       }
     }),
@@ -143,8 +136,8 @@ export const paymentRouter = createTRPCRouter({
         return report;
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to generate daily report',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate daily report",
         });
       }
     }),
@@ -153,19 +146,21 @@ export const paymentRouter = createTRPCRouter({
    * Process offline transactions (sync)
    */
   syncOfflineTransactions: roleProcedure(RoleEnum.paymentStaff)
-    .input(z.object({
-      transactions: z.array(offlineTransactionValidator),
-    }))
+    .input(
+      z.object({
+        transactions: z.array(offlineTransactionValidator),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       try {
         const results = await PaymentService.processOfflineTransactions(
           input.transactions,
           ctx.user!.id
         );
-        
-        const successCount = results.filter(r => r.success).length;
-        const failureCount = results.filter(r => !r.success).length;
-        
+
+        const successCount = results.filter((r) => r.success).length;
+        const failureCount = results.filter((r) => !r.success).length;
+
         return {
           success: true,
           message: `Synced ${successCount} transactions successfully, ${failureCount} failed`,
@@ -174,12 +169,12 @@ export const paymentRouter = createTRPCRouter({
             total: results.length,
             successful: successCount,
             failed: failureCount,
-          }
+          },
         };
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to sync offline transactions',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to sync offline transactions",
         });
       }
     }),
@@ -188,9 +183,14 @@ export const paymentRouter = createTRPCRouter({
    * Get cash register summary
    */
   getCashRegisterSummary: roleProcedure(RoleEnum.paymentStaff)
-    .input(z.object({
-      date: z.date().optional().default(() => new Date()),
-    }))
+    .input(
+      z.object({
+        date: z
+          .date()
+          .optional()
+          .default(() => new Date()),
+      })
+    )
     .query(async ({ input, ctx }) => {
       try {
         const summary = await PaymentService.getCashRegisterSummary(
@@ -200,8 +200,8 @@ export const paymentRouter = createTRPCRouter({
         return summary;
       } catch (error) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to get cash register summary',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get cash register summary",
         });
       }
     }),
@@ -210,9 +210,11 @@ export const paymentRouter = createTRPCRouter({
    * Validate CIN before deposit (for QR scanner)
    */
   validateCin: roleProcedure(RoleEnum.paymentStaff)
-    .input(z.object({
-      cin: z.string().min(5).max(24),
-    }))
+    .input(
+      z.object({
+        cin: z.string().min(5).max(24),
+      })
+    )
     .mutation(async ({ input }) => {
       try {
         const student = await PaymentService.getStudentByCin(input);
@@ -223,18 +225,18 @@ export const paymentRouter = createTRPCRouter({
             fullName: `${student.firstName} ${student.lastName}`,
             currentBalance: student.balance,
             isActive: student.isActive,
-          }
+          },
         };
       } catch (error) {
-        if (error instanceof TRPCError && error.code === 'NOT_FOUND') {
+        if (error instanceof TRPCError && error.code === "NOT_FOUND") {
           return {
             valid: false,
-            message: 'Student not found with this CIN',
+            message: "Student not found with this CIN",
           };
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to validate CIN',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to validate CIN",
         });
       }
     }),

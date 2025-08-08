@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Wallet,
   DollarSign,
@@ -26,6 +25,7 @@ import { StatCard } from "../elements/stat-card";
 import { PaymentDepositCard } from "./ui/payment-deposit-card";
 import { useOnlineStatus } from "@/hooks/use-Online";
 import { RecentTransactions } from "./ui/recent-transactions/recent-transactions";
+import { StatusIndicator } from "../elements/isOnlineElement";
 
 const PaymentStaffDashboardComponent = () => {
   const { user, isLoadingUser } = useProfile();
@@ -96,7 +96,7 @@ const PaymentStaffDashboardComponent = () => {
 
   if (loadingDaily || loadingRecent || isLoadingUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -107,17 +107,7 @@ const PaymentStaffDashboardComponent = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Badge
-            variant={serverOnline ? "default" : "destructive"}
-            className="flex items-center space-x-1"
-          >
-            <div
-              className={`w-2 h-2 rounded-full ${
-                userOnline ? "bg-green-500" : "bg-red-500"
-              }`}
-            ></div>
-            <span>{userOnline ? "Online" : "Offline"}</span>
-          </Badge>
+          <StatusIndicator />
           {offlineTransactions.length > 0 && (
             <Button
               onClick={handleSyncOfflineTransactions}
@@ -234,9 +224,7 @@ const PaymentStaffDashboardComponent = () => {
         <Button
           variant="outline"
           className="h-16"
-          onClick={() =>
-            (window.location.href = "/dashboard/payment/checkout")
-          }
+          onClick={() => (window.location.href = "/dashboard/payment/checkout")}
         >
           <Users className="h-6 w-6 mr-2" />
           Student Lookup
@@ -245,9 +233,7 @@ const PaymentStaffDashboardComponent = () => {
         <Button
           variant="outline"
           className="h-16"
-          onClick={() =>
-            (window.location.href = "/dashboard/payment/report")
-          }
+          onClick={() => (window.location.href = "/dashboard/payment/report")}
         >
           <DollarSign className="h-6 w-6 mr-2" />
           Daily Report

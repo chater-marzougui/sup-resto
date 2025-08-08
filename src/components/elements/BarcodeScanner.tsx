@@ -9,28 +9,45 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Scan, Eye, EyeOff, Camera } from "lucide-react";
-import { de } from "zod/v4/locales";
 
 interface BarcodeScannerProps {
-  onBarcodeScanned: (barcode: string) => boolean; // Return true for successful scan, false for duplicates
+  onBarcodeScanned: (barcode: string) => boolean;
   isVisible?: boolean;
   onVisibilityToggle?: () => void;
-  scanDelay?: number; // Delay between scans in milliseconds
+  scanDelay?: number;
   className?: string;
 }
+
+const borderColors = {
+  default: "border-gray-300",
+  success: "border-green-300",
+  error: "border-red-300",
+};
 
 export function BarcodeScanner({
   onBarcodeScanned,
   isVisible = true,
   onVisibilityToggle,
-  scanDelay = 1500,
+  scanDelay = 800,
   className = "",
 }: BarcodeScannerProps) {
   const [cameraNumber, setCameraNumber] = useState<number>(0);
   const [devices, setDevices] = useState<CameraDevice[]>([]);
+  const [borderColor, setBorderColor] = useState<
+    (typeof borderColors)[keyof typeof borderColors]
+  >(borderColors.default);
   const isWaitCompleteRef = useRef(true);
   const qrRegionRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+
+  const updateBorderColor = async (isSuccess: boolean) => {
+    setBorderColor(isSuccess ? borderColors.success : borderColors.error);
+    await new Promise(() =>
+      setTimeout(() => {
+        setBorderColor(borderColors.default);
+      }, 400)
+    );
+  };
 
   // QR Code scanner setup
   useEffect(() => {
@@ -64,19 +81,25 @@ export function BarcodeScanner({
 
         const cameraId = availableDevices[cameraNumber].id;
         const config: Html5QrcodeCameraScanConfig = {
-          fps: 10,
+          fps: 15,
           qrbox: { width: 300, height: 300 },
+          aspectRatio: 1.0,
+          videoConstraints: {
+            facingMode: cameraNumber === 0 ? "user" : "environment",
+            aspectRatio: 1.0,
+            frameRate: { ideal: 15, max: 30 },
+          },
         };
 
         html5QrCode
           .start(
             cameraId,
             config,
-            (decodedText, result: Html5QrcodeResult) => {
-              if (!isMounted) return;
+            async (decodedText, result: Html5QrcodeResult) => {
+              if (!isMounted || !isWaitCompleteRef.current) return;
+              console.log("QR Code scanned:", decodedText);
               // Allow vibration for all scans
-              if (navigator.vibrate) navigator.vibrate(100);
-
+              if (navigator.vibrate) navigator.vibrate(150);
               // Call the callback and get result
               let res: string = decodedText;
               if (result.result.format?.formatName === "ITF") {
@@ -88,17 +111,18 @@ export function BarcodeScanner({
               } else {
                 return;
               }
-              const wasSuccessful = onBarcodeScanned(res);
 
-              // Only apply delay for successful scans, allow immediate retry for duplicates
-              if (wasSuccessful && isWaitCompleteRef.current) {
-                isWaitCompleteRef.current = false;
+              // Call the callback and get result
+              updateBorderColor(await onBarcodeScanned(res));
+              isWaitCompleteRef.current = false;
+              await new Promise<void>(() => {
                 setTimeout(() => {
                   if (isMounted) {
                     isWaitCompleteRef.current = true;
                   }
+                  isWaitCompleteRef.current = true;
                 }, scanDelay);
-              }
+              });
             },
             () => {}
           )
@@ -124,7 +148,7 @@ export function BarcodeScanner({
         html5QrCodeRef.current.clear();
       }
     };
-  }, [isVisible, cameraNumber, onBarcodeScanned, scanDelay]);
+  }, [isVisible, cameraNumber, scanDelay]);
 
   const toggleCamera = () => {
     setCameraNumber((prev) => 1 - prev);
@@ -169,12 +193,7 @@ export function BarcodeScanner({
             <div
               id="qr-reader"
               ref={qrRegionRef}
-              className="mx-auto max-w-sm rounded-lg border-4 border-dashed"
-              style={{
-                maxHeight: "300px",
-                borderColor: "#3b82f6",
-                backgroundColor: "#f0f9ff",
-              }}
+              className={`mx-auto max-w-sm h-fit rounded-lg border-4 border-dashed ${borderColor}`}
             />
           </div>
         )}

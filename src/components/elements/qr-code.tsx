@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,14 +16,17 @@ import { BarcodeScanner } from "./BarcodeScanner";
 interface BarcodeScannerButtonProps {
   onScan: (data: string) => void;
   buttonText?: string;
+  withManualInput?: boolean;
+  closeOnScan?: boolean;
 }
 
 const BarcodeScannerButton: React.FC<BarcodeScannerButtonProps> = ({
   onScan,
   buttonText = "Scan Barcode",
+  withManualInput = true,
+  closeOnScan = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [manualInput, setManualInput] = useState("");
 
   const onScanComplete = (data: string) => {
@@ -25,8 +34,11 @@ const BarcodeScannerButton: React.FC<BarcodeScannerButtonProps> = ({
       onScan(data);
       setManualInput(data);
     }
+    if (closeOnScan) {
+      setIsOpen(false);
+    }
     return true; // Indicate successful scan
-  }
+  };
 
   const handleManualSubmit = () => {
     if (manualInput.trim()) {
@@ -36,7 +48,7 @@ const BarcodeScannerButton: React.FC<BarcodeScannerButtonProps> = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleManualSubmit();
     }
   };
@@ -49,40 +61,36 @@ const BarcodeScannerButton: React.FC<BarcodeScannerButtonProps> = ({
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTitle className="sr-only">Barcode Scanner</DialogTitle>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Barcode Scanner</DialogTitle>
-          </DialogHeader>
           <BarcodeScanner onBarcodeScanned={onScanComplete} />
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="manual-input">Or enter barcode manually:</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="manual-input"
-                  type="text"
-                  value={manualInput}
-                  onChange={(e) => setManualInput(e.target.value)}
-                  onKeyUp={handleKeyPress}
-                  placeholder="Enter barcode"
-                  className="flex-1"
-                />
-                <Button onClick={handleManualSubmit} disabled={!manualInput.trim()}>
-                  Submit
-                </Button>
+            {withManualInput && (
+              <div className="space-y-2">
+                <Label htmlFor="manual-input">Or enter barcode manually:</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="manual-input"
+                    type="text"
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    onKeyUp={handleKeyPress}
+                    placeholder="Enter barcode"
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleManualSubmit}
+                    disabled={!manualInput.trim()}
+                  >
+                    Submit
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            <div className="text-sm text-muted-foreground space-y-1">
-              <div>• Point camera at barcode to scan</div>
-              <div>• 2-second delay between consecutive scans</div>
-              {cameras.length > 1 && (
-                <div>• Switch cameras using the rotate button</div>
-              )}
-            </div>
+            )}
           </div>
         </DialogContent>
+        <DialogDescription className="sr-only">Barcode Scanner</DialogDescription>
       </Dialog>
     </>
   );

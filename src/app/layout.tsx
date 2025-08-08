@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Toaster duration={3000} position='top-right'/>
+        <Toaster richColors duration={3000} position='top-right'/>
         <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
           <TRPCProvider>
             <AuthProvider>
