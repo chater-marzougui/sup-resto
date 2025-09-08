@@ -48,6 +48,7 @@ const PaginatedTransactionsModal: React.FC<PaginatedTransactionsModalProps> = ({
         {
           cursor,
           limit: pageSize,
+          userId: user?.id as string,
         },
         {
           enabled: isOpen,

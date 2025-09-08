@@ -44,20 +44,16 @@
 ## ✅ VERIFICATION STAFF Dashboard
 ### Dashboard Overview
 - Today's meal verification stats (meals scanned vs scheduled)
-- Current meal period status (breakfast/lunch/dinner active)
+- Current meal period status (lunch/dinner active)
 - QR Scanner for meal verification (different from payment scanning)
 - Recent meal verifications (last 10 students scanned)
-- All Payment Staff features (dual functionality)
 - No-show alerts (scheduled but not consumed meals)
 
 ### Additional Pages/Features
 - Meal Verification Scanner: Scan QRs during meal times to mark attendance
-- Meal Time Management: Start/stop meal periods, set availability
 - Student Meal Status: Check if student has scheduled meal for current period
 - Manual Meal Marking: Handle cases when QR scanning fails
 - Meal Period Reports: Attendance statistics per meal period
-- Problem Resolution: Handle disputes, double bookings, etc.
-- Kitchen Notifications: Alert kitchen of actual attendance vs planned
 
 ## 🔧 ADMIN Dashboard
 ### Dashboard Overview

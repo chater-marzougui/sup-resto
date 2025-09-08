@@ -95,6 +95,7 @@ sup-resto/
 5. **Others**
    - ✅ tRPC router expansion for meal management
    - ✅ Meal purchasing and scheduling system
+   - ✅ QR code scanning for payments and verification
 
 6. Phase 1: Core Meal Management (Current Priority)
 
@@ -129,12 +130,11 @@ src/components/meal-management/
 
 ### 🔄 In Progress
 
-- Dashboard content implementation for each role (completed student, teacher and half-done payment staff)
+- Dashboard content implementation for each role (completed student, teacher and payment staff)
 - tRPC router expansion for meal management
 
 ### ⏳ Planned Features
 
-- QR code scanning for payments and verification
 - Offline synchronization capabilities
 - Analytics dashboard for kitchen staff
 - Admin panel for user management

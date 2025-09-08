@@ -235,13 +235,7 @@ export const transactionRouter = createTRPCRouter({
             message: "User not authenticated",
           });
         }
-
-        if (ctx.user.role > 2) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Cannot access other users' transaction history",
-          });
-        }
+        
         return await TransactionService.getUserTransactionHistory(
           ctx.user?.id,
           input
