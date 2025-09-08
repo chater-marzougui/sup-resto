@@ -272,6 +272,10 @@ Special thanks to:
 
 **🍽️ Revolutionizing university dining, one digital ticket at a time.**
 
+---
+
+> 📚 **Developer Note**: For detailed technical documentation, development roadmap, and current implementation status, see [`new-readme.md`](./new-readme.md) which contains comprehensive project architecture details, current features, and development plans.
+
 
 [contributors-shield]: https://img.shields.io/github/contributors/chater-marzougui/sup-resto.svg?style=for-the-badge
 [contributors-url]: https://github.com/chater-marzougui/sup-resto/graphs/contributors
